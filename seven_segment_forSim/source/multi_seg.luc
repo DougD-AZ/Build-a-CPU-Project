@@ -1,0 +1,34 @@
+module multi_seg #(
+    MAX_VALUE = 10 : MAX_VALUE > 0
+  ) (
+    input clk,  // clock
+    input rst,  // reset
+    output sel[4],
+    output bcd[4]
+  ) {
+   .clk(clk) {
+    .rst(rst) {
+      dff ctr[$clog2(MAX_VALUE)];
+      dff ctr2[2](#INIT(0));
+      dec_counter dec_ctr; 
+    }
+  }
+  decoder digit_dec(#WIDTH(2));
+  always {
+    ctr.d = ctr.q + 1;
+    if (ctr.q == MAX_VALUE) {
+      ctr.d = 0;
+      ctr2.d=ctr2.q + 1;
+      }
+    digit_dec.in = ctr2.q;
+    sel = digit_dec.out;
+    case(ctr2.q) {
+      0: bcd = dec_ctr.dig0;
+      1: bcd = dec_ctr.dig1;
+      2: bcd = dec_ctr.dig2;
+      3: bcd = dec_ctr.dig3; 
+      default: bcd = 0;
+     } 
+    }   
+  }
+

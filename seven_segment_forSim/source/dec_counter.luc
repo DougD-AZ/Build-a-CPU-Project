@@ -1,0 +1,49 @@
+module dec_counter 
+#(MAX_VALUE = 200 : MAX_VALUE > 0)
+(
+    input clk,  // clock
+    input rst,  // reset
+    output dig0[4],
+    output dig1[4],
+    output dig2[4],
+    output dig3[4]
+) {
+    .clk(clk) {
+    .rst(rst) {
+      dff ctr[$clog2(MAX_VALUE)];
+      dff digit0[4];
+      dff digit1[4];
+      dff digit2[4];
+      dff digit3[4]; 
+            }
+         }
+    
+    always {
+        ctr.d = ctr.q + 1;
+        if (ctr.q == MAX_VALUE-5) {
+                digit0.d = digit0.q + 1;
+            }
+        if (digit0.q == 10) {
+                digit0.d = 0;
+                digit1.d = digit1.q + 1;
+            }
+        if (digit1.q == 10) {
+                 digit1.d = 0;
+                 digit2.d = digit2.q + 1;
+            }
+        if (digit2.q == 10) {
+                    digit2.d = 0;
+                    digit3.d = digit3.q + 1;
+            }
+        if (digit3.q == 10) {
+                    digit3.d = 0;
+             }
+        if (ctr.q == MAX_VALUE){
+            ctr.d=0;
+        }
+        dig0 = digit0.q;
+        dig1 = digit1.q;
+        dig2 = digit2.q;
+        dig3 = digit3.q;    
+        }
+   }
