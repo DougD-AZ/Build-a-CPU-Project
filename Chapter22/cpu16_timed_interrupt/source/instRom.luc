@@ -1,0 +1,103 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+   // pc names
+   const START = 16d05;
+   const CONT = 16d105;
+   const CONT2 = 16d140;
+   const INTERRUPT = 16d10000;
+   const RETURN =    16d10500;
+   
+   always {
+    inst = c{Inst.NOP, 19b0};                                 // default instruction is NOP
+    case (address) {
+       // get a character from serial input
+       00: inst = c{Inst.LDI, Reg.X5, 16d50             };     // initialize X5 at 50 (for 5 ms timer)
+    START: inst = c{Inst.NOP, Call.SER_IN,          14d0};     // wait for serial input 
+       10: inst = c{Inst.IN, Reg.S2, Port.SER_IN,   13d0};     // put input in reg S2       
+       15: inst = c{Inst.OUT, Reg.S2, Port.SER_OUT, 13d0};     // put reg S2 in out port   
+       20: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial output echos input
+  
+       // if char entered is backspace, reset all digits to 0
+       25: inst = c{Inst.LDI, Reg.S1, 16h0A             };  // load LF or Enter
+       30: inst = c{Inst.CMP, Reg.S2, Reg.S1,       13d0};  // compare it 
+       35: inst = c{Inst.BNE, CONT,                  3d0};  // if not, skip the reset
+       40: inst = c{Inst.LDI, Reg.S1, 16h0              };  // load a 0
+       45: inst = c{Inst.LDI, Reg.X3, 16h1              };  // load address digit 1
+       50: inst = c{Inst.SMA, Reg.X3,               16d0};  // set the address 
+       55: inst = c{Inst.STM, Reg.S1,               16d0};  // store a zero in RAM 
+       60: inst = c{Inst.LDI, Reg.X3, 16h2              };  // load address digit
+       65: inst = c{Inst.SMA, Reg.X3,               16d0};  // set the address 
+       70: inst = c{Inst.STM, Reg.S1,               16d0};  // store a zero in RAM 
+       75: inst = c{Inst.LDI, Reg.X3, 16h4              };  // load address digit 3
+       80: inst = c{Inst.SMA, Reg.X3,               16d0};  // set the address 
+       85: inst = c{Inst.STM, Reg.S1,               16d0};  // store a zero in RAM 
+       90: inst = c{Inst.LDI, Reg.X3, 16h8              };  // load address digit 4
+       95: inst = c{Inst.SMA, Reg.X3,               16d0};  // set the address 
+      100: inst = c{Inst.STM, Reg.S1,               16d0};  // store a zero in RAM 
+           
+       // convert char to a number
+     CONT: inst = c{Inst.LDI, Reg.S1, 16h30             };    // Is our char
+      110: inst = c{Inst.CMP, Reg.S2, Reg.S1,       13d0};    // less than h30?
+      115: inst = c{Inst.BLT, START,                 3d0};    // if so, ignore 
+      120: inst = c{Inst.LDI, Reg.S1, 16h3A             };    // Is our char
+      125: inst = c{Inst.CMP, Reg.S2, Reg.S1,       13d0};    // less than 3A? 
+      130: inst = c{Inst.BLT, CONT2,                 3d0};    // is so, use it
+      135: inst = c{Inst.JMP, START,                 3d0};    // otherwise, ignore
+    CONT2: inst = c{Inst.LDI, Reg.X4, 16h30             };    // subtrate h30 from char
+      145: inst = c{Inst.SUB, Reg.S2,Reg.S2,Reg.X4, 10d0};    // to get its numerical value    
+        
+       // move num in digit 3 to digit 4
+      150: inst = c{Inst.LDI, Reg.X2, 16d4              };    // digit 3 LS
+      155: inst = c{Inst.LDI, Reg.X3, 16d8              };    // digit 4 MS 
+      160: inst = c{Inst.SMA, Reg.X2,               16d0};    // set memory address digit 1
+      165: inst = c{Inst.LDM, Reg.S1,               16d0};    // load from memory
+      170: inst = c{Inst.SMA, Reg.X3,               16d0};    // sset memory address digit 2
+      175: inst = c{Inst.STM, Reg.S1,               16d0};    // store the the the number
+      
+       // move num in digit 2 to digit 3
+      180: inst = c{Inst.LDI, Reg.X2, 16d2              };    // digit 2
+      185: inst = c{Inst.LDI, Reg.X3, 16d4              };    // digit 3 
+      190: inst = c{Inst.SMA, Reg.X2,               16d0};    // set memory address digit 1
+      195: inst = c{Inst.LDM, Reg.S1,               16d0};    // load from memory
+      200: inst = c{Inst.SMA, Reg.X3,               16d0};    // sset memory address digit 2
+      205: inst = c{Inst.STM, Reg.S1,               16d0};    // store the the the number
+      
+       // move num in digit 1 to digit 2
+      210: inst = c{Inst.LDI, Reg.X2, 16d1              };    // digit 1 LS
+      215: inst = c{Inst.LDI, Reg.X3, 16d2              };    // digit 2 
+      220: inst = c{Inst.SMA, Reg.X2,               16d0};    // set memory address digit 1
+      225: inst = c{Inst.LDM, Reg.S1,               16d0};    // load from memory
+      230: inst = c{Inst.SMA, Reg.X3,               16d0};    // sset memory address digit 2
+      235: inst = c{Inst.STM, Reg.S1,               16d0};    // store the number 
+  
+       // store the new number in digit 1 
+      240: inst = c{Inst.SMA, Reg.X2,               16d0};     // set memory address digit 1
+      245: inst = c{Inst.STM, Reg.S2,               16d0};     // store the new number
+      250: inst = c{Inst.JMP, START,                 3d0};     // back to beginning      
+      
+        
+   // timed interrupt routine
+   // hard-wired at ProgCounter 10000  
+   // S1 = the number, X1 the segment (one hot). X5 the time delay
+   // OUT1 = 7 seq code, OUT2 = seg select
+   // Takes numbers stored in mem at 8,4,2,1 and output them to 7 seg segment display     
+   INTERRUPT: inst = c{Inst.DEC, Reg.X5,                 16d0};    // count down from 50
+       10010: inst = c{Inst.CMP, Reg.X5,                 16d0};    // to finish every 5 msec
+       10020: inst = c{Inst.BNZ, RETURN,                  3d0};    // Not there, RTN
+       10030: inst = c{Inst.SHR, Reg.X1, 16d1                };    // move to next segment
+       10035: inst = c{Inst.CMP, Reg.X1,                 16d0}; 
+       10040: inst = c{Inst.BNZ, 16d10060,                3d0};    // if it shifted to 0
+       10050: inst = c{Inst.LDI, Reg.X1, 16d8                };    // reset it to 8
+       10060: inst = c{Inst.OUT, Reg.X1, Port.OUT2,      13d0};    // select segment 
+       10070: inst = c{Inst.SMA, Reg.X1,                 16d0};    // set mem address for number (same as segment)
+       10075: inst = c{Inst.LDM, Reg.S1,                 16d0};    // get the the number from memory
+       10077: inst = c{Inst.SMA, Reg.S1,                 16d0};    // set mem addrss for 7 seg code for that number
+       10080: inst = c{Inst.LDR, Reg.D1,                 16d0};    // get 7 seg code from text ROM 
+       10090: inst = c{Inst.OUT, Reg.D1, Port.OUT1,      13d0};    // output 7 seg code to out1
+       10100: inst = c{Inst.LDI, Reg.X5, 16d50               };    // reset the counter
+      RETURN: inst = c{Inst.RTN,                         19d0};    // return               
+    }
+  }
+}

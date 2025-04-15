@@ -1,0 +1,60 @@
+global Inst {
+  const NOP = 5h00;  // No operation  - 19 xx
+  const INC = 5h01;  // Increment register - 16 xx
+  const DEC = 5h02;  // Decrement register - 16 xx
+  const LDI = 5h03;  // Load register immediate with 16 bit number - 0 xx
+  const SMA = 5h04;  // Set the RAM address from register - 16xx
+  const LDM = 5h05;  // Load 16 bits  to register from memory location - 0 xx
+  const STM = 5h06;  // Store 16 bits from reg to memory location - 0 xx
+  const LDR = 5h07;  // Load from textRom to dest reg from scr1 reg address - 16xx
+  const MOV = 5h08;  // Move to dest register from source register - 13 xx
+  const PSHI = 5h09;  // Push 16 bit number onto stack - 3 xx
+  const PSHR = 5h0A;  // Push content of dest reg onto stack - 16xx
+  const PULR = 5h0B;  // Pull from stack to dest reg = 16xx
+  const IN  = 5h0C;  // load byte into reg from outside - 16 xx
+  const OUT = 5h0D;  // send byte from reg to outside - 16 xx
+  const JMP = 5h0E;  // Set PC to 16 bit pAddr uncoinditional - 3 xx
+  const BRZ = 5h0F;  // Set PC to 16 bit pAddr if Zero flog set - 3 xx
+  const BNZ = 5h10;  // Set PC to 16 bit pAddr if Zero flog is clear - 3 xx
+  const BNE = 5h11;  // Set PC to 16 bit pAddr if Equal flag is clear - 3 xx
+  const BLT = 5h12;  // Set PC to 16 bit pAddr if LessThan flag set - 3 xx
+  const RTN = 5h13;  // Return - Set PC to address at top of stack - 19 xx
+  const ADD = 5h14;  // Add dest reg and scr reg, result in dest reg - 13 xx
+  const SUB = 5h15;  // Substract dest reg from scr reg, result in dest reg - 13 xx
+  const AND = 5h16;  // AND dest reg and scr reg, result in dest reg - 13 xx
+  const OR  = 5h17;  // OR dest reg and scr reg, result in dest reg - 13 xx
+  const XOR = 5h18;  // XOR dest reg and scr reg, result in dest reg - 13 xx
+  const SHL = 5h19;  // Shift left  dest reg by a 16 bit number of bits - 0 xx
+  const SHR = 5h1A;  // Shift right dest reg by a 16 bit number of bits - 0 xx
+  const CMP = 5h1B;  // Compare dest reg and scr reg, set zero, equal flags; set LT flag if scr < dest - 13 xx
+  const NOT = 5h1C;  // Invert register - 16 xx
+  const SEF = 5h1D;  // Set equal flag - 19 xx
+  const CEF = 5h1E;  // Clr equal flag - 19 xx
+}
+
+global Reg {  
+  const D1 = 3d0;   // destination reg = reg[0]
+  const S1 = 3d1;   // source reg 1 = reg[1]
+  const S2 = 3d2;   // source reg 2 = reg[2]
+  const X1 = 3d3;   // index 1 = reg[3]
+  const X2 = 3d4;   // index 2 = reg[4]
+  const X3 = 3d5;   // index 3 = reg[5]
+  const X4 = 3d6;   // index 4 = reg[6]
+  const X5 = 3d7;   // index 5 = reg[7]
+}
+
+global Call {
+  const SER_IN = 5d1;   // serial in to din
+  const SER_OUT = 5d2;  // serial out from dout
+}
+
+global Port {
+  const IN0 = 3d0;     // IN port 0
+  const IN1 = 3d1;     // IN port 1
+  const IN2 = 3d2;     // IN port 2
+  const OUT0 = 3d3;    // OUT port 0
+  const OUT1 = 3d4;    // OUT port 1
+  const OUT2 = 3d5;    // OUT port 2
+  const SER_IN = 3d6;  // serial IN
+  const SER_OUT = 3d7; // serial OUT
+}

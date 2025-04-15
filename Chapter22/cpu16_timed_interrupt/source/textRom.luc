@@ -1,0 +1,22 @@
+ module textRom (
+  input address[6],
+  input sel[6],
+  output one_char[8]
+  ) {
+  always {
+   // we have highjacked out text ROM to put the 7 segment codes in
+    case (address) {
+      0: one_char = 8b00111111;
+      1: one_char = 8b00000110;
+      2: one_char = 8b01011011;
+      3: one_char = 8b01001111;
+      4: one_char = 8b01100110;
+      5: one_char = 8b01101101;
+      6: one_char = 8b01111101;
+      7: one_char = 8b00000111;
+      8: one_char = 8b01111111;
+      9: one_char = 8b01100111;
+      default: one_char = 8b00000000;  // dark
+    }
+  }
+}

@@ -1,0 +1,154 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+    const DELAY1 =     16d9000;
+    const DELAY10 =    16d9100;
+    const PULSE_EN =   16d9200;
+    const SEND =       16d9300;
+    const TXTOUT =     16d9400; 
+    const INTERRUPT = 16d10000;
+    const RETURN    = 16d10005;
+    // X5 is reserved for time delays
+    // X1 is reserved for RS bit
+   always {
+    inst = c{Inst.NOP, 19b0};                        // default instruction is NOP
+    case (address) {
+        //  this section initiates LCD controller and puts it in 4 bit mode
+        000: inst = c{Inst.PSHI, 16d20,             3d0};     // wait 20 msec.
+        010: inst = c{Inst.JMP, DELAY10,            3d0};
+        020: inst = c{Inst.PSHI, 16d40,             3d0};     
+        030: inst = c{Inst.JMP, DELAY10,            3d0};
+      
+        040: inst = c{Inst.LDI, Reg.S1, 16d03          };     // initiate startup
+        050: inst = c{Inst.OUT, Reg.S1, Port.OUT0, 13d0};
+        060: inst = c{Inst.PSHI, 16d75,             3d0};     // wait 10 msec.
+        070: inst = c{Inst.JMP, DELAY10,            3d0};
+      
+        075: inst = c{Inst.PSHI, 16d85,             3d0};     // send enable pulse. 
+        080: inst = c{Inst.JMP, PULSE_EN,           3d0}; 
+        085: inst = c{Inst.PSHI, 16d95,             3d0};     // wait 10 msec. 
+        090: inst = c{Inst.JMP, DELAY10,            3d0}; 
+      
+        095: inst = c{Inst.PSHI, 16d105,            3d0};     // send enable pulse. 
+        100: inst = c{Inst.JMP, PULSE_EN,           3d0}; 
+        105: inst = c{Inst.PSHI, 16d115,            3d0};     // wait 10 msec. 
+        110: inst = c{Inst.JMP, DELAY10,            3d0}; 
+      
+        115: inst = c{Inst.PSHI, 16d125,            3d0};     // send enable pulse. 
+        120: inst = c{Inst.JMP, PULSE_EN,           3d0}; 
+        125: inst = c{Inst.PSHI, 16d140,            3d0};     // wait 10 msec. 
+        130: inst = c{Inst.JMP, DELAY10,            3d0}; 
+      
+        140: inst = c{Inst.LDI, Reg.S1, 16d02          };     // set 4 bit mode
+        150: inst = c{Inst.OUT, Reg.S1, Port.OUT0, 13d0};
+        160: inst = c{Inst.PSHI, 16d175,            3d0};     // wait 10 msec.
+        170: inst = c{Inst.JMP, DELAY10,            3d0};
+      
+        175: inst = c{Inst.PSHI, 16d185,            3d0};     // send enable pulse. 
+        180: inst = c{Inst.JMP, PULSE_EN,           3d0}; 
+        185: inst = c{Inst.PSHI, 16d195,            3d0};     // wait 10 msec. 
+        190: inst = c{Inst.JMP, DELAY10,            3d0}; 
+        //  controller now in 4 bit mode
+        
+        // Now send 8 bit instuctions to controller
+        200: inst = c{Inst.LDI, Reg.X1,16d0            };    // set  instruction mode
+        205: inst = c{Inst.LDI, Reg.D1, 16h2C          };    // 2 lines, 5x10 font
+        210: inst = c{Inst.PSHI, 16d225,            3d0};      
+        215: inst = c{Inst.JMP, SEND,               3d0};    // send to controller
+        225: inst = c{Inst.LDI, Reg.D1, 16h06          };    // cursor move right
+        230: inst = c{Inst.PSHI, 16d245,            3d0};      
+        235: inst = c{Inst.JMP, SEND,               3d0};    // send to controller
+           
+        245: inst = c{Inst.LDI, Reg.D1, 16h0C          };    // display on
+        250: inst = c{Inst.PSHI, 16d265,            3d0};   
+        255: inst = c{Inst.JMP, SEND,               3d0};    // send to controller
+   
+        265: inst = c{Inst.LDI, Reg.D1, 16h01          };    // clear display
+        270: inst = c{Inst.PSHI, 16d300,            3d0};      
+        275: inst = c{Inst.JMP, SEND,               3d0};    // send to controller
+        // Now display is on and ready for text entry 
+        
+        // Now output text
+        300: inst = c{Inst.LDI, Reg.X3, 16d0           };    // set ROM line number  0
+        310: inst = c{Inst.LDI, Reg.X2, 16h80          };    // set cursor position  beg of ln1
+        315: inst = c{Inst.PSHI, 16d325,            3d0};     
+        320: inst = c{Inst.JMP, TXTOUT,             3d0};    // output the text
+      
+        325: inst = c{Inst.LDI, Reg.X3, 16d1           };    // set ROM line number  1
+        330: inst = c{Inst.LDI, Reg.X2, 16hC0          };    // set cursor position  beg of ln2
+        335: inst = c{Inst.PSHI, 16d345,            3d0};     
+        340: inst = c{Inst.JMP, TXTOUT,             3d0};    // output the text
+      
+        345: inst = c{Inst.LDI, Reg.X3, 16d2           };    // set ROM line number  2
+        350: inst = c{Inst.LDI, Reg.X2, 16h94          };    // set cursor position  beg of ln3
+        355: inst = c{Inst.PSHI, 16d365,            3d0};     
+        360: inst = c{Inst.JMP, TXTOUT,             3d0};    // output the text
+      
+        365: inst = c{Inst.LDI, Reg.X3, 16d3           };    // set ROM line number  3
+        370: inst = c{Inst.LDI, Reg.X2, 16hD4          };    // set cursor position  beg of ln4
+        375: inst = c{Inst.PSHI, 16d400,            3d0};     
+        380: inst = c{Inst.JMP, TXTOUT,             3d0};    // output the text
+                  
+        400: inst = c{Inst.JMP, 16d400,             3d0};    // stay here
+          
+      // 1 msec delay
+     DELAY1: inst = c{Inst.LDI, Reg.X5,  16d10};
+       9020: inst = c{Inst.CMP, Reg.X5,   16d0};
+       9030: inst = c{Inst.BNZ, 16d9020,   3d0};
+       9040: inst = c{Inst.RTN,           19d0};
+      
+       // 10 msec delay
+    DELAY10: inst = c{Inst.LDI, Reg.X5, 16d100};
+       9120: inst = c{Inst.CMP, Reg.X5,   16d0};
+       9130: inst = c{Inst.BNZ, 16d9120,   3d0};
+       9140: inst = c{Inst.RTN,           19d0};
+      
+      // Sends a pulse to enable and waits 1 msec.
+  PULSE_EN : inst = c{Inst.LDI, Reg.S1,           16d01};     // Pulse enable high
+       9210: inst = c{Inst.OUT, Reg.S1, Port.OUT1, 13d0};
+       9212: inst = c{Inst.PSHI, 16d9220,           3d0};  
+       9213: inst = c{Inst.JMP, DELAY1,             3d0};     // for 1 msec. 
+       9220: inst = c{Inst.LDI, Reg.S1,           16d00};     // then enable low 
+       9230: inst = c{Inst.OUT, Reg.S1, Port.OUT1, 13d0};
+       9240: inst = c{Inst.PSHI, 16d9260,           3d0};  
+       9250: inst = c{Inst.JMP, DELAY1,             3d0};     // wait 1 msec. 
+       9260: inst = c{Inst.RTN,                    19d0};     // return
+      
+    // Send an 8 bit instruction or character to the LCD controller.  
+    //  D1 = data;   X1 = 0 for inst. or X1 = 1 for char; uses S1   
+       SEND: inst = c{Inst.OUT, Reg.X1, Port.OUT2, 13d0};     // set RS as inst or data
+       9305: inst = c{Inst.MOV, Reg.S1, Reg.D1,    13d0};     // move data to S1
+       9310: inst = c{Inst.SHR, Reg.S1, 16d4           };     // shift S1 right 4 bits
+       9315: inst = c{Inst.OUT, Reg.S1, Port.OUT0, 13d0};     // output 4 high order bits
+       9320: inst = c{Inst.PSHI, 16d9330,           3d0};     //
+       9325: inst = c{Inst.JMP, PULSE_EN,           3d0};     // pulse enable
+       9330: inst = c{Inst.OUT, Reg.D1, Port.OUT0, 13d0};     // output 4 low order bits
+       9335: inst = c{Inst.PSHI, 16d9345,           3d0};     //
+       9340: inst = c{Inst.JMP, PULSE_EN,           3d0};     // pulse enable
+       9345: inst = c{Inst.RTN,                    19d0};     // return
+      
+    // Put a line of text in display; assumes X2 is cursor position and X3 is line in ROM
+     TXTOUT: inst = c{Inst.LDI, Reg.X1,16d0            };     // set instruction mode   
+       9405: inst = c{Inst.MOV, Reg.D1, Reg.X2,    13d0};     // set cursor position
+       9410: inst = c{Inst.PSHI, 16d9420,           3d0};      
+       9415: inst = c{Inst.JMP, SEND,               3d0};     // send to controller
+       9420: inst = c{Inst.LDI, Reg.X1, 16d1           };     // set text output mode
+       9425: inst = c{Inst.SMA, Reg.X3,            16d0};     // set text ROM line #
+       9430: inst = c{Inst.LDI, Reg.X4, 16d0           };     // set char select to 0
+       9435: inst = c{Inst.LDR, Reg.D1, Reg.X4,    13d0};     // load char from ROM
+       9440: inst = c{Inst.LDI, Reg.S2, 16h0A          };     // put LF char in S2
+       9445: inst = c{Inst.CMP, Reg.D1, Reg.S2,    13d0};     // is the char a LF
+       9450: inst = c{Inst.BNE, 16d9460,            3d0};     // if not, keep going
+       9455: inst = c{Inst.RTN,                    19d0};     // else return
+       9460: inst = c{Inst.PSHI, 16d9470,           3d0};     //
+       9465: inst = c{Inst.JMP, SEND,               3d0};     // 
+       9470: inst = c{Inst.INC, Reg.X4,            16d0};     // increment char sel
+       9475: inst = c{Inst.JMP, 16d9435,            3d0};     // back to get another char from ROM  
+         
+     // timed interrupt routine - used for time delays, uses X5 
+  INTERRUPT: inst = c{Inst.DEC, Reg.X5,   16d0};    // count down from 100
+     RETURN: inst = c{Inst.RTN,           19d0};    // return            
+    }
+  }
+}

@@ -1,0 +1,33 @@
+module textRom (
+  input address[6],
+  input sel[6],
+  output one_char[8]
+  ) {
+  sig text[64][8];
+  always {
+   
+    text = "                                                                "; //default
+    
+    case (address) {
+    // the next 4 lines test whole line output through TXTOUT
+      0: text = $reverse("Liquid Crystal \n                                                ");
+      1: text = $reverse("Display. Programmed\n                                            ");
+      2: text = $reverse("by a 16 bit CPU on \n                                            ");
+      3: text = $reverse("Alchtry AU FPGA!!\n                                              ");
+      
+    }
+    one_char =  text[sel];
+  }
+}
+   //  HD44780 instructions (all hex):  
+   //  80 - set cursor at line 0
+   //  C0 - set curson on line 2
+   //  94 - set cursor on line 3
+   //  D4 - set curson on line 4
+   //  28 - 2 line, 5x8 font
+   //  2C - 2 line, 5x10 font
+   //  08 - display off
+   //  0C - display on
+   //  01 - clear display
+   //  1C - shift right
+   //  18 - shift left
