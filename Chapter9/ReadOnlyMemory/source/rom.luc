@@ -1,0 +1,19 @@
+// this ROM gives up a list of all 8-bit primes, i.e. less than 256
+module rom (
+  input address[6], // 6 bit address gives us up to 32 different addresses
+	 output prime[8]   // 8 bit output gives us numbers up to 255 
+   ) 
+{   
+
+  const PRIME_LIST = $reverse({8d0, 8d2, 8d3, 8d5, 8d7, 8d11, 8d13, 8d17, 8d19, 
+            8d23, 8d29, 8d31, 8d37, 8d41, 8d43, 8d47, 8d53, 8d59, 8d61, 8d67, 
+            8d71, 8d73, 8d79, 8d83, 8d89, 8d97, 8d101, 8d103, 8d107, 8d109, 8d113, 
+            8d127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 
+            193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251, 8d0, 8d0, 8d0, 
+            8d0, 8d0, 8d0, 8d0, 8d0, 8d0});
+  
+  always {
+	    prime = PRIME_LIST[address];
+    }
+}
+    
