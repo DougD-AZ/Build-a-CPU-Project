@@ -1,0 +1,65 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+  
+   always {
+    inst = c{Inst.NOP, 19b0};                              // default instruction is NOP
+    case (address) { 
+            // this block scans through the left bank of LEDs
+       00: inst = c{Inst.LDI, Reg.D1,  16d0};    
+       02: inst = c{Inst.OUT, Reg.D1,  Port.OUT0, 13d0};
+       04: inst = c{Inst.LDI, Reg.X3,  16d8};        // loop 8 times
+       08: inst = c{Inst.LDI, Reg.D1,  16d128};       // start with left most LED
+       10: inst = c{Inst.OUT, Reg.D1,  Port.OUT2, 13d0}; // put output at port 3 
+       12: inst = c{Inst.PSHI, 16d16,  3d0};            // put subr return address on stack   
+       14: inst = c{Inst.JMP, 16d200,  3d0};            // jump to delay       
+       16: inst = c{Inst.SHR, Reg.D1, 16d01};      // shift D1 one bit to right  
+       18: inst = c{Inst.DEC, Reg.X3, 16d0};          // serial output
+       20: inst = c{Inst.CMP, Reg.X3, 16d0};
+       22: inst = c{Inst.BNZ, 16d10,   3d0};   
+      
+            // this block scans through the middle bank of LEDs
+       30: inst = c{Inst.LDI, Reg.D1,  16d0};    
+       32: inst = c{Inst.OUT, Reg.D1,  Port.OUT2, 13d0};
+       34: inst = c{Inst.LDI, Reg.X3,  16d8};        // loop 8 times
+       36: inst = c{Inst.LDI, Reg.D1,  16d128};       // start with left most LED
+       38: inst = c{Inst.OUT, Reg.D1,  Port.OUT1, 13d0}; // put output at port 3   
+       40: inst = c{Inst.PSHI, 16d44,  3d0};            // put subr return address on stack   
+       42: inst = c{Inst.JMP, 16d200,  3d0};            // jump to delay      
+       44: inst = c{Inst.SHR, Reg.D1, 16d01};      // shift D1 one bit to right  
+       46: inst = c{Inst.DEC, Reg.X3, 16d0};          // serial output
+       48: inst = c{Inst.CMP, Reg.X3, 16d0};
+       50: inst = c{Inst.BNZ, 16d38,   3d0}; 
+      
+            // this block scans through the right bank of LEDs
+       60: inst = c{Inst.LDI, Reg.D1,  16d0};    
+       62: inst = c{Inst.OUT, Reg.D1,  Port.OUT1, 13d0};
+       64: inst = c{Inst.LDI, Reg.X3,  16d8};        // loop 8 times
+       66: inst = c{Inst.LDI, Reg.D1,  16d128};       // start with left most LED
+       68: inst = c{Inst.OUT, Reg.D1,  Port.OUT0, 13d0}; // put output at port 3 
+       70: inst = c{Inst.PSHI, 16d74,   3d0};            // put subr return address on stack   
+       72: inst = c{Inst.JMP, 16d200,  3d0};            // jump to delay       
+       74: inst = c{Inst.SHR, Reg.D1, 16d01};      // shift D1 one bit to right  
+       76: inst = c{Inst.DEC, Reg.X3, 16d0};          // serial output
+       78: inst = c{Inst.CMP, Reg.X3, 16d0};
+       80: inst = c{Inst.BNZ, 16d68,   3d0};
+       82: inst = c{Inst.JMP, 16d0,   3d0}; 
+              
+    // subroutine for 0.25 sec delay:
+   // 100 * 2^16 = 6,500,000 * 4 clock cycles/count = 25,000,000 (clock speed = 100M Hz)       
+     200: inst = c{Inst.LDI, Reg.X1, 16d100};   // load X1 with 100
+     201: inst = c{Inst.DEC, Reg.X1, 16d0};      // decrement X1                 
+     202: inst = c{Inst.CMP, Reg.X1, 16d0};      // compare X1                   
+     203: inst = c{Inst.BRZ, 16d208,  3d0};        // if 0, jump  to exit    
+      
+     204: inst = c{Inst.INC, Reg.X2, 16d0};         // increment X1                 
+     205: inst = c{Inst.CMP, Reg.X2, 16d0};       // compare X1         
+     206: inst = c{Inst.BNZ, 16d204,  3d0};         // if 0, go to 201  
+     207: inst = c{Inst.JMP, 16d201,  3d0};         // else go to 204
+      
+     208: inst = c{Inst.RTN, 19d0};          // return from subroutine  
+ 
+    }
+  }
+}

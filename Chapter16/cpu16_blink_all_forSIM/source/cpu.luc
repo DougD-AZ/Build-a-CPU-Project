@@ -1,0 +1,139 @@
+// 16 bit processor with 16 bit memory access
+// Inst = 23 bits, OpCode = first 5 bits, 
+// Instructions limited to single clock cycle
+
+module cpu (
+    input  clk,          // clock
+    input  rst,          // reset
+    input  ser_in[8],    // serial data in
+    input  in0[8],     // input port 0
+    input  in1[8],     // input port 1
+    input  in2[8],     // input port 2
+    input  clear,        // clear periferal code
+    output ser_out[8],    // serial data out
+    output out0[8],     // output port 3
+    output out1[8],     // output port 4
+    output out2[8],     // output port 5
+    output perf[10]      // periferal code out   
+) {
+  instRom instRom;
+ // textRom textRom;
+ // simple_ram ram (#WITDTH(16), #DEPTH(4096), .clk(clk));  // 4K * 16 bits = 8K bytes
+  .clk(clk), .rst(rst) {
+    dff reg[8][16];        // CPU Registers, reset clears all
+    dff pc[16];            // program counter
+    dff stack[8][16];      // the stack - 8 deep
+    dff sp[3];             // stack pointer
+    dff outSer[8];          // output serial reg
+    dff outreg0[8];        // output 0 reg
+    dff outreg1[8];         // output 1 reg
+    dff outreg2[8];         // output 2 reg
+    dff zflag;             // flags
+    dff eflag;
+    dff ltflag;
+ //   dff ramAddr[12];
+  } 
+
+// signals for instruction decomposition  
+  sig op[5];       // opcode
+  sig dest[3];     // destination 
+  sig scr1[3];      // source 1
+  sig scr2[3];      // source 2
+  sig pAddr[16];   // prog counter address
+  sig value16[16]; // 16 bit value for memory location or immediate load
+  sig perfcode[10];  // 10 bit code allows peripher hardware to take control.
+    always {
+  //  ram.address = ramAddr.q;       // set up ram; address is only 12 bits of available 16
+  //  ram.write_en = 0;
+ //   ram.write_data = 8hxx;      // don't care
+    ser_out = outSer.q;               // out port
+    out0 = outreg0.q;               // out Port 0
+    out1 = outreg1.q;               // out Port 1
+    out2 = outreg2.q;               // out port 2 
+    instRom.address = pc.q;     // instructions are all cycle clock cycle
+  //  textRom.address = 10hxx;    // don't care
+    // decompose the instruction        
+    op   = instRom.inst[23:19];     // opcode is top 6 bits
+    dest = instRom.inst[18:16];     // dest is next 2 bits
+    scr1 = instRom.inst[15:13];      // scr is next 2 bits
+    scr2 = instRom.inst[12:10];      // scr2 is next 3 bits
+    pAddr = instRom.inst[18:3];     // program counter address
+    value16 = instRom.inst[15:0];   // 16 bit value for memory location or immediate load
+    perfcode = instRom.inst[23:14]; // 10 bits, if 0, true no op.  if 1-31, peripheral takes control
+    perf = perfcode;                // output the purfcode
+    if (perfcode == 0 || (perfcode > 31)) pc.d = pc.q + 1;  // increment program counter
+    if (clear) {
+      perfcode = 0;
+      pc.d = pc.q + 1;
+    }
+   // Perform the operation
+    case (op) {
+      Inst.INC:  reg.d[dest] = reg.q[dest] + 1;
+      Inst.DEC:  reg.d[dest] = reg.q[dest] - 1;
+      Inst.LDI:  reg.d[dest] = value16;
+//      Inst.SMA:  
+ //       ramAddr.d =  reg.q[dest][11:0]; 
+ //     Inst.LDM:
+//        reg.d[dest] = ram.read_data;      
+//      Inst.STM:
+//        ram.write_en = 1;
+//        ram.write_data = reg.q[dest];
+//      Inst.LDR:
+ //       textRom.address= reg.q[scr1][9:0];
+ //       reg.d[dest] = textRom.char;  
+      Inst.MOV:  reg.d[dest] = reg.q[scr1];  
+      Inst.PSHI: 
+        stack.d[sp.q+1] = pAddr;
+        sp.d = sp.q + 1;  
+      Inst.PSHR: 
+        stack.d[sp.q+1] = reg.q[dest]; 
+        sp.d = sp.q + 1;   
+      Inst.PULR:   
+        reg.d[dest] = stack.q[sp.q];  
+        sp.d = sp.q - 1;  
+      Inst.IN:   
+        if (scr1 == Port.IN0) 
+           reg.d[dest] = in0; 
+        else if (scr1 == Port.IN1) 
+           reg.d[dest] = in1;
+        else if (scr1 == Port.IN2) 
+           reg.d[dest] = in2;
+        else if (scr1 == Port.SER_IN) 
+           reg.d[dest] = ser_in;
+      Inst.OUT:
+        if (scr1 == Port.OUT0) 
+           outreg0.d = reg.q[dest][7:0]; 
+        else if (scr1 == Port.OUT1) 
+           outreg1.d = reg.q[dest][7:0]; 
+        else if (scr1 == Port.OUT2) 
+           outreg2.d = reg.q[dest][7:0]; 
+        else if (scr1 == Port.SER_OUT) 
+           outSer.d = reg.q[dest][7:0]; 
+      Inst.JMP:  pc.d = pAddr; 
+      Inst.BRZ:  if (zflag.q==1) pc.d = pAddr; 
+      Inst.BNZ:  if (zflag.q==0) pc.d = pAddr; 
+      Inst.BNE:  if (eflag.q==0) pc.d = pAddr; 
+      Inst.BLT:  if (ltflag.q==1) pc.d = pAddr;
+      Inst.RTN:  
+        pc.d = stack.q[sp.q]; 
+        sp.d = sp.q - 1;  
+      Inst.ADD:  reg.d[dest] = reg.q[scr1]  + reg.q[scr2];             
+      Inst.SUB:  reg.d[dest] = reg.q[scr1]  - reg.q[scr2];  
+      Inst.AND:  reg.d[dest] = reg.q[scr1] & reg.q[scr2];
+      Inst.OR:   reg.d[dest] = reg.q[scr1] | reg.q[scr2];
+      Inst.XOR:  reg.d[dest] = reg.q[scr1] ^ reg.q[scr2];
+      Inst.SHL:  reg.d[dest] = reg.q[dest] << value16;
+      Inst.SHR:  reg.d[dest] = reg.q[dest] >> value16;
+      Inst.CMP:
+        if (reg.q[dest] == 0) zflag.d = 1;
+        else zflag.d = 0;
+        if (reg.q[dest] == reg.q[scr1]) eflag.d = 1;
+        else eflag.d = 0;
+        if (reg.q[dest] < reg.q[scr1]) ltflag.d = 1;
+        else ltflag.d = 0;    
+      Inst.NOT:  reg.d[dest] = ~reg.q[dest];
+      Inst.SEF:  eflag.d = 1; 
+      Inst.CEF:  eflag.d = 0; 
+      }
+   }
+}

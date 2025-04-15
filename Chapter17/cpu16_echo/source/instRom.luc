@@ -1,0 +1,16 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+  
+   always {
+    inst = c{Inst.NOP, 19b0};                              // default instruction is NOP
+    case (address) {                                       
+       00: inst = c{Inst.NOP, Call.SER_IN,   14d0};          // wait for any input
+       10: inst = c{Inst.IN, Reg.D1, Port.SER_IN, 13d0};    // put input in reg D1       
+       20: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT,13d0};   // put reg D1 in out port   
+       30: inst = c{Inst.NOP, Call.SER_OUT,  14d0};          // serial output 
+       40: inst = c{Inst.JMP, 16d0,  3d0};          // load X1 with 7
+    }
+  }
+}

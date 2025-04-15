@@ -1,0 +1,30 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+  
+  always {
+    inst = c{Inst.NOP, 19b0};                         // default instruction is NOP
+    case (address) {
+    // begin:
+      0: inst = c{Inst.INC, Reg.D1, 16d0};           // Increment D1  
+      1: inst = c{Inst.OUT, Reg.D1, Port.OUT0, 13d0}; // output D1 to port OUT0     
+      2: inst = c{Inst.PSHI, 16d0,    3d0};          // put subr return address on stack   
+      3: inst = c{Inst.JMP, 16d200,  3d0};            // jump to delay        
+    
+   // subroutine for 1 sec delay:   
+   // 400 * 2^16 = 25,000,000 * 4(clk cycles) = 100,000,000 (100M Hz clock)         
+     200: inst = c{Inst.LDI, Reg.X1, 16d400};    // load X1 with 100
+     201: inst = c{Inst.DEC, Reg.X1, 16d0};      // decrement X1                 
+     202: inst = c{Inst.CMP, Reg.X1, 16d0};      // compare X1                   
+     203: inst = c{Inst.BRZ, 16d208,  3d0};      // if 0, jump  to exit    
+      
+     204: inst = c{Inst.INC, Reg.X2, 16d0};       // increment X1                 
+     205: inst = c{Inst.CMP, Reg.X2, 16d0};       // compare X1         
+     206: inst = c{Inst.BNZ, 16d204,  3d0};       // if not 0, go to 204 
+     207: inst = c{Inst.JMP, 16d201,  3d0};       // else go to 201
+      
+     208: inst = c{Inst.RTN, 19d0};          // return from subroutine 
+    }
+  }
+}
