@@ -1,0 +1,81 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+    const START =     16d90;
+    const TXTOUT =    16d5000;
+    const TXTOUT2 =   16d6000;
+   
+   always {
+    inst = c{Inst.NOP, 19b0};                                    // default instruction is NOP
+    case (address) {
+       
+  START: inst = c{Inst.NOP, Call.SER_IN,              14d0};     // wait for serial input 
+        
+       100: inst = c{Inst.LDI, Reg.X4,16d0                };     // load X4 with address 0
+       105: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       110: inst = c{Inst.PSHI, 16d120,               3d00};     // push return onto stack
+       115: inst = c{Inst.JMP, TXTOUT,                3d00};     // Jmp to sub - output one line
+      
+       120: inst = c{Inst.LDI, Reg.X4,16d1                };     // load X4 with address 0
+       125: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       130: inst = c{Inst.PSHI, 16d140,               3d00};     // push return onto stack
+       135: inst = c{Inst.JMP, TXTOUT,                3d00};     // Jmp to sub - output one line
+      
+       140: inst = c{Inst.LDI, Reg.X4,16d2                };     // load X4 with address 0
+       145: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       150: inst = c{Inst.PSHI, 16d160,               3d00};     // push return onto stack
+       155: inst = c{Inst.JMP, TXTOUT,               3d00};     // Jmp to sub - output one line
+      
+       160: inst = c{Inst.LDI, Reg.X4,16d3                };     // load X4 with address 0
+       165: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       170: inst = c{Inst.PSHI, 16d180,               3d00};     // push return onto stack
+       175: inst = c{Inst.JMP, TXTOUT,                3d00};      // Jmp to sub - output one line
+      
+       180: inst = c{Inst.LDI, Reg.X4,16d4                };      // load X4 with address 0
+       185: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       190: inst = c{Inst.LDI, Reg.X2, 16d51              };     // load number of chars
+       195: inst = c{Inst.PSHI, 16d210,               3d00};     // push return address
+       200: inst = c{Inst.JMP, TXTOUT2,               3d00};     // Jmp to sub - output one line
+      
+       210: inst = c{Inst.LDI, Reg.X4,16d5                };      // load X4 with address 0
+       215: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       220: inst = c{Inst.LDI,  Reg.X2, 16d19             };     // load number of chars
+       225: inst = c{Inst.PSHI, 16d235,               3d00};     // push return address
+       230: inst = c{Inst.JMP, TXTOUT2,               3d00};     // Jmp to sub - output one line
+      
+       235: inst = c{Inst.LDI, Reg.X4,16d6                };      // load X4 with address 0
+       240: inst = c{Inst.SMA, Reg.X4,               16d00};     // set X4 as ROM address
+       245: inst = c{Inst.LDI, Reg.X2, 16d20              };     // load number of chars
+       250: inst = c{Inst.PSHI, 16d300,               3d00};     // push return address
+       255: inst = c{Inst.JMP, TXTOUT2,               3d00};     // Jmp to sub - output one line
+      
+       300: inst = c{Inst.JMP, START,                 3d00};     // go back to start
+        
+       // output one line of text ending in LF (\n)
+       // address of line should already to loaded using SMA
+     TXTOUT: inst = c{Inst.LDI, Reg.X3,16d00               };     // load X3 with char select to 0
+       5010: inst = c{Inst.LDR, Reg.D1, Reg.X3,        13d0};     // get char from ROM
+       5015: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT,  13d0};     // put in serOut port
+       5020: inst = c{Inst.NOP, Call.SER_OUT,          14d0};     // ouput char  
+       5025: inst = c{Inst.LDI, Reg.X5, 16h0A              };     // load X5 with LF char
+       5030: inst = c{Inst.CMP, Reg.D1, Reg.X5,        13d0};     // compare to last char sent
+       5035: inst = c{Inst.BNE, 16d5045,                3d0};     // not equal, keep going
+       5040: inst = c{Inst.RTN,                        19d0};     // if equal, return
+       5045: inst = c{Inst.INC, Reg.X3,                16d0};     // incr char select
+       5050: inst = c{Inst.JMP, 16d5010,                 3d0};    // go back for another char
+      
+       // put the number of characters into reg.X2 before calling 
+       // address of line should already to loaded using SMA
+    TXTOUT2: inst = c{Inst.LDI, Reg.X3,16d00               };     // load X3 with char select to 0   
+       6010: inst = c{Inst.LDR, Reg.D1, Reg.X3,        13d0};     // get char from ROM
+       6020: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT,  13d0};     // put in serOut port
+       6025: inst = c{Inst.NOP, Call.SER_OUT,          14d0};     // ouput char 
+       6030: inst = c{Inst.INC, Reg.X3,                16d0};     // incr char select
+       6035: inst = c{Inst.DEC, Reg.X2,                16d0};     // dec char count
+       6040: inst = c{Inst.CMP, Reg.X2,                16d0};     // load X4 with address 0
+       6045: inst = c{Inst.BNZ, 16d6010,                3d0};     // load X4 with ROM address
+       6050: inst = c{Inst.RTN,                        19d0};     // get char from ROM    
+    }
+  }
+}

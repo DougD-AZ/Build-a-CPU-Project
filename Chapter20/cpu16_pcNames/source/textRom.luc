@@ -1,0 +1,45 @@
+module textRom (
+  input address[10],
+  output one_char[8]
+  ) {
+  
+  always {
+    one_char = 8h20;                         // default is a space
+    case (address) {
+    // Name?_:
+      00: one_char = 8h4E;
+      01: one_char = 8h61;
+      02: one_char = 8h6d;
+      03: one_char = 8h65;
+      04: one_char = 8h3F;
+      05: one_char = 8h20;
+      05: one_char = 8h20;
+    // Hello_
+      07: one_char = 8h48;
+      08: one_char = 8h65;
+      09: one_char = 8h6C;
+      10: one_char = 8h6C;
+      11: one_char = 8h6F; 
+      12: one_char = 8h20;
+    //
+      13: one_char = 8h6C;
+      14: one_char = 8h6F;
+      15: one_char = 8h48;
+      16: one_char = 8h65;
+      17: one_char = 8h6C;
+      18: one_char = 8h6C;
+      19: one_char = 8h6F; 
+      20: one_char = 8h48;
+      21: one_char = 8h65;
+      22: one_char = 8h6C;
+      23: one_char = 8h6C;
+      24: one_char = 8h6F;
+      25: one_char = 8h48;
+      26: one_char = 8h65;
+      27: one_char = 8h6C;
+      28: one_char = 8h6C;
+      29: one_char = 8h6F; 
+      
+    }
+  }
+}

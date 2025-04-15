@@ -1,0 +1,82 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+  
+   always {
+    inst = c{Inst.NOP, 19b0};                              // default instruction is NOP
+    case (address) {                                       
+    // wait for serial input and echo it:
+       00: inst = c{Inst.NOP, Call.SER_IN,   14d0};          // wait for any input
+       10: inst = c{Inst.IN, Reg.D1, Port.SER_IN,  13d0};          // put input in reg D1       
+       20: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};          // put reg D1 in out port   
+       30: inst = c{Inst.NOP, Call.SER_OUT,  14d0};          // serial output
+     // output serial "Name?" 
+       40: inst = c{Inst.LDI, Reg.X3,        16d7};          // load X1 with 7
+       50: inst = c{Inst.LDI, Reg.X4,       16h00};          // load ROM address of "Name?_"
+       60: inst = c{Inst.LDR, Reg.D1, Reg.X4,13h0};          // load D1 with text Rom      
+       70: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};           // put reg D1 in out port   
+       80: inst = c{Inst.NOP, Call.SER_OUT,  14d0};           // serial output
+       90: inst = c{Inst.INC, Reg.X4,        16d0}; 
+      100: inst = c{Inst.DEC, Reg.X3,        16d0};           // decrement counter
+      110: inst = c{Inst.CMP, Reg.X3,        16d0};           // check if zero
+      120: inst = c{Inst.BRZ, 16d140,          3d0};           // if done, jump to 14   
+      130: inst = c{Inst.JMP, 16d60,           3d0};           // go back for next char 
+     // input a name from serial and store it in RAM  
+      140: inst = c{Inst.LDI, Reg.X3,       16d32};           // load max char in X3 
+      150: inst = c{Inst.LDI, Reg.X4,        16d0};           // load mem loc in X4
+      160: inst = c{Inst.LDI, Reg.S1,       16h0A};           // load LF in S1
+      170: inst = c{Inst.NOP, Call.SER_IN,   14d0};           // get serial input
+      180: inst = c{Inst.IN, Reg.D1, Port.SER_IN,  13d0};           // put it in D1
+      190: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};           // put reg D1 in out port   
+      200: inst = c{Inst.NOP, Call.SER_OUT,  14d0};           // echo it
+      210: inst = c{Inst.SMA, Reg.X4,        16d0};           // set address in RAM
+      220: inst = c{Inst.STM, Reg.D1,        16d0};           // store char in RAM
+      230: inst = c{Inst.CMP, Reg.D1, Reg.S1,13d0};           // compare it to LF
+      240: inst = c{Inst.BNE, 16d250,          3d0};           // if not CR, move to 250 
+      245: inst = c{Inst.JMP, 16d300,          3d0};           // done
+      250: inst = c{Inst.INC, Reg.X4,        16d0};           // Inc mem loc 
+      260: inst = c{Inst.DEC, Reg.X3,        16d0};           // Dec char count
+      270: inst = c{Inst.CMP, Reg.X3,        16d0};           // compare it to 0 
+      280: inst = c{Inst.BRZ, 16d300,          3d0};           // if 0, go to 30
+      290: inst = c{Inst.JMP, 16d170,          3d0};           // go back and get another char 
+    // output CR and LF
+      300: inst = c{Inst.PSHI, 16d350, 3d0};                   // set rtn to "Hello"
+      310: inst = c{Inst.JMP, 16d1000, 3d0};                   // jump to subr CR/LF
+    // say "Hello "
+      350: inst = c{Inst.LDI, Reg.X3,        16d6};           // load num of chars to display 
+      360: inst = c{Inst.LDI, Reg.X4,        16h7};           // load mem loc  for "hello" in X4
+      370: inst = c{Inst.LDR, Reg.D1, Reg.X4,13d0};           // read mem, store in D1
+      380: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};           // put char in out
+      390: inst = c{Inst.NOP, Call.SER_OUT,  14d0};           // serial output
+      400: inst = c{Inst.INC, Reg.X4,        16d0};           // Inc mem loc 
+      410: inst = c{Inst.DEC, Reg.X3,        16d0};           // Dec char count
+      420: inst = c{Inst.CMP, Reg.X3,        16d0};           // compare it to 0 
+      430: inst = c{Inst.BRZ, 16d450,          3d0};           // if 0, go to 45
+      440: inst = c{Inst.JMP, 16d370,          3d0};           // go back and get another char  
+    // output name stored in memory  
+      450: inst = c{Inst.LDI, Reg.X4,         16d0};           // load mem loc with 0
+      460: inst = c{Inst.SMA, Reg.X4,         16d0};           // set RAM address
+      470: inst = c{Inst.NOP,                 19d0};           // wait one cycle
+      480: inst = c{Inst.LDM, Reg.D1,         16d0};           // read mem, store in D1
+      490: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};           // D1 to out
+      500: inst = c{Inst.NOP, Call.SER_OUT,   14d0};           // serial output 
+      510: inst = c{Inst.CMP, Reg.D1, Reg.S1, 13d0};           // compare it to CR
+      520: inst = c{Inst.BNE, 16d530, 3d0};                    // if CR, move to 550 
+      523: inst = c{Inst.PSHI, 16d40, 3d0};                    // set rtn to start over
+      525: inst = c{Inst.JMP, 16d1000, 3d0};                   // jump to subr CR/LF
+      530: inst = c{Inst.INC, Reg.X4,         16d0};           // Inc mem loc  
+      540: inst = c{Inst.JMP, 16d460,           3d0};          // go get next char from mem
+            
+      // Subroutine to output CR and LF
+      1000: inst = c{Inst.LDI, Reg.D1,        16h0D};         // put CR in D1
+      1010: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};   // put CR in out
+      1020: inst = c{Inst.NOP, Call.SER_OUT,   14d0};         // serial output
+      1030: inst = c{Inst.LDI, Reg.D1,        16h0A};         // put LF in D1
+      1040: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};   // put it in out
+      1050: inst = c{Inst.NOP, Call.SER_OUT,   14d0};         // serial output
+      1060: inst = c{Inst.RTN,                 19d0};         // return  
+            
+    }
+  }
+}

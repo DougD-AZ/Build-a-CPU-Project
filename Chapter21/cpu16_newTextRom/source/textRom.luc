@@ -1,0 +1,22 @@
+module textRom (
+  input address[6],
+  input sel[6],
+  output one_char[8]
+  ) {
+  sig text[64][8];
+  always { 
+    text = "                                                                "; //default
+    case (address) {
+    // the next 4 lines test whole line output through TXTOUT
+      0: text = $reverse("This is a test printing out a whole line.\n                      ");
+      1: text = $reverse("This is another whole line - 123456789.\n                        ");
+      2: text = $reverse("And another.\n                                                   ");
+      3: text = $reverse("And a 4th!!\n                                                    ");
+     // the next 3 lines test specified number of characters sent through TXTOUT2 
+      4: text = $reverse("This line is being sent based on character count! \n             ");
+      5: text = $reverse("This one is too!!                                               ");
+      6: text = $reverse("And so it this one.\n                                            ");
+    }
+    one_char =  text[sel];
+  }
+}
