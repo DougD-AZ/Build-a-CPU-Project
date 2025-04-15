@@ -1,0 +1,53 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+    const WAIT = 16d10;
+    const LOOP = 16d120;
+    const SEND = 16d1000;
+    const INTERRUPT = 16d10000;
+    const RETURN    = 16d10012;
+    // X5 is reserved for time delays
+
+   always {
+    inst = c{Inst.NOP, 19b0};                        // default instruction is NOP
+    case (address) {
+            
+        000: inst = c{Inst.LDI, Reg.X5, 16d20           };    // set interrupt count for 2 msec.
+        002: inst = c{Inst.LDI, Reg.X4, 16d1           };  
+       WAIT: inst = c{Inst.CMP, Reg.X4,                16d0};    // wait for interrupt flag
+        020: inst = c{Inst.BNE, WAIT,                   3d0};
+        030: inst = c{Inst.LDI, Reg.X4, 16d0               };     // clear interrupt flag
+        100: inst = c{Inst.NOP, Call.AD_CONV,          14d0};     // call A/D converter
+        110: inst = c{Inst.IN, Reg.X1, Port.IN0,       13d0};     // load A/D out to reg X1
+        115: inst = c{Inst.LDI, Reg.D1, 16h20              };     // load D1 with a space     
+       LOOP: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT,  13d0};     // put reg D1 in out port   
+        130: inst = c{Inst.NOP, Call.SER_OUT,          14d0};     // serial output
+        140: inst = c{Inst.DEC, Reg.X1,                16d0};     // decrement A/D out
+        150: inst = c{Inst.CMP, Reg.X1,                16d0};     // compare it
+        160: inst = c{Inst.BNZ, LOOP,                   3d0};     // if not 0, loop
+        170: inst = c{Inst.PSHI, WAIT,                  3d0};     //  if done, laod Wait as return
+        180: inst = c{Inst.JMP, SEND,                   3d0};     // jump to subr SEND     
+                     
+       // Subroutine to output asterisk plus CR and LF
+      SEND: inst = c{Inst.LDI, Reg.D1,        16h2A};         // put asterisk in D1
+      1010: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};   // put asterisk in out
+      1020: inst = c{Inst.NOP, Call.SER_OUT,   14d0};         // serial output
+      1030: inst = c{Inst.LDI, Reg.D1,        16h0D};         // put CR in D1
+      1040: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};   // put CR in out
+      1050: inst = c{Inst.NOP, Call.SER_OUT,   14d0};         // serial output
+      1060: inst = c{Inst.LDI, Reg.D1,        16h0A};         // put LF in D1
+      1070: inst = c{Inst.OUT, Reg.D1, Port.SER_OUT, 13d0};   // put it in out
+      1080: inst = c{Inst.NOP, Call.SER_OUT,   14d0};         // serial output
+      1090: inst = c{Inst.RTN,                 19d0};         // return  
+         
+     // timed interrupt routine - used for time delays, uses X5 
+  INTERRUPT: inst = c{Inst.DEC, Reg.X5,                16d0};    // count down from 3
+      10002: inst = c{Inst.CMP, Reg.X5,                16d0};    // to finish every 400 microsec
+      10004: inst = c{Inst.BNZ, RETURN,                 3d0};    // Not there, RTN
+      10008: inst = c{Inst.LDI, Reg.X4, 16d0               };    // pulse X4
+      10010: inst = c{Inst.LDI, Reg.X5, 16d20               };    // reset count
+     RETURN: inst = c{Inst.RTN,                        19d0};    // return            
+    }
+  }
+}

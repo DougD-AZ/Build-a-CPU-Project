@@ -1,0 +1,40 @@
+module alchitry_top (
+    input clk,              // 100MHz clock
+    input rst_n,            // reset button (active low)
+    output led[8],          // 8 user controllable LEDs
+    input usb_rx,           // USB->Serial input
+    output usb_tx,           // USB->Serial output
+    output dl4,              // 5 data lines
+    output dl3,
+    output dl2,
+    output dl1,
+    output dl0,               
+    input cmp                // input from comparitor
+) {
+
+    sig rst                 // reset signal
+
+ .clk(clk) {
+    reset_conditioner reset_cond;
+      .rst(rst) {
+            a2d_converter a2d;
+            looper looper; 
+    }
+  }
+
+    always {
+        reset_cond.in = ~rst_n  // input raw inverted reset signal
+        rst = reset_cond.out    // conditioned reset
+        led = 8h00              // turn LEDs off
+        usb_tx = usb_rx         // echo the serial data
+        looper.ready = a2d.done;
+        a2d.cmp = cmp;
+        a2d.start = looper.out;
+        dl4 = a2d.dac[4];
+        dl3 = a2d.dac[3];
+        dl2 = a2d.dac[2];
+        dl1 = a2d.dac[1];
+        dl0 = a2d.dac[0];
+        led = a2d.dac;
+    }
+}

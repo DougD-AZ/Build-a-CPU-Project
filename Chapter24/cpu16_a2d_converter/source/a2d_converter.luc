@@ -1,0 +1,53 @@
+module a2d_converter (
+    input clk,  // clock
+    input rst,            // reset button (active low)
+    output dac[5],  // output to DAC
+    input cmp,    // input from Comparater
+    input start,   // start conversion
+    output done    // conversion is done
+ 
+) {
+       .clk(clk) {
+         .rst (rst) {
+            dff doneFlag;
+            dff dacReg[5];
+            dff sequencer[$clog2(5000)]; // max 50 msec
+         }
+       }
+    
+    always {
+        dac = dacReg.q;
+        done = doneFlag.q;
+        if (start==1) {
+            doneFlag.d = 0;
+        } 
+        if (doneFlag.q == 0) sequencer.d = sequencer.q + 1;
+        // set MSB of dacReg
+        if (sequencer.q == 10) dacReg.d = 16;
+        if (sequencer.q == 1000){
+            if (cmp) dacReg.d = 0;
+        }
+        // set second bit of dacReg  
+        if (sequencer.q== 1010) dacReg.d = dacReg.q + 8;
+        if (sequencer.q== 2000) {
+            if (cmp) dacReg.d = dacReg.q - 8;
+        }
+        // set third bit of dacReg
+        if (sequencer.q==2010) dacReg.d = dacReg.q + 4;
+        if (sequencer.q==3000) {
+            if (cmp) dacReg.d = dacReg.q - 4;
+        }
+        // set fourth bit of dacReg
+        if (sequencer.q==3010) dacReg.d = dacReg.q + 2;
+        if (sequencer.q==4000) {
+            if (cmp) dacReg.d = dacReg.q - 2;
+        }
+         // set fifth bit of dacReg
+        if (sequencer.q == 4010) dacReg.d = dacReg.q + 1;
+        if (sequencer.q == 5000) {
+            if (cmp) dacReg.d = dacReg.q - 1;
+            sequencer.d = 0;
+            doneFlag.d = 1;
+        }
+    }
+}

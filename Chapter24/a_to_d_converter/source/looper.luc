@@ -1,0 +1,23 @@
+module looper (
+    input clk,  // clock
+    input rst,  // reset
+    input ready,  // is a2d ready;
+    output out
+) {
+    
+    .clk(clk) {
+         .rst (rst) {
+            dff ctr[$clog2(100000000)];  // count to 1/2 sec
+         }
+       }
+    
+    always {
+        out = 0;
+        if (ready == 1)ctr.d = ctr.q + 1; 
+        if (ctr.q == 49999999) out = 1;
+        if (ctr.q == 50000000) {
+           ctr.d = 0; 
+           out = 0;
+        }
+    }
+}

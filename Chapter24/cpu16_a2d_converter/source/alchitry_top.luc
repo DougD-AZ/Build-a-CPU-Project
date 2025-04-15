@@ -1,0 +1,72 @@
+module alchitry_top (
+    input clk,              // 100MHz clock
+    input rst_n,            // reset button (active low)
+    output led[8],          // 8 user controllable LEDs
+    input usb_rx,           // USB->Serial input
+    output usb_tx,           // USB->Serial output
+    output dl4,              // 5 data lines
+    output dl3,
+    output dl2,
+    output dl1,
+    output dl0,               
+    input cmp                // input from comparitor
+) {
+
+    sig rst                 // reset signal
+
+  .clk(clk) {
+    reset_conditioner reset_cond;
+    .rst(rst) {
+      cpu cpu;
+      a2d_converter a2d;
+      uart_rx uart_rx(#BAUD(1000000), #CLK_FREQ(100000000));
+      uart_tx uart_tx(#BAUD(1000000), #CLK_FREQ(100000000));
+    }
+  }
+
+  always {
+    a2d.start = 0;
+    cpu.ser_in = 8hxx;
+    cpu.clear = 0; 
+    uart_tx.new_data = 0;
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    led = 8h00;             // turn LEDs off
+  //  io_segment = 8hff;          // turn segments off
+  //  io_select = 4hf;           // select no digits
+  //  io_led = 3x{{8h00}};    // turn LEDs off
+    uart_tx.data = cpu.ser_out;// echo the serial data
+    cpu.ser_in = uart_rx.data;
+    uart_tx.block = 0;
+    usb_tx = uart_tx.tx;    // connect the output
+    uart_rx.rx = usb_rx;    // connect the input
+    if (cpu.perf==1) {      // Call Serial In
+       if (uart_rx.new_data){
+          cpu.ser_in = uart_rx.data;
+          cpu.clear = 1;
+      } 
+    }
+    if (cpu.perf==2) {      // Call Serial Out
+          uart_tx.data = cpu.ser_out; 
+          uart_tx.new_data = 1;
+          if (!uart_tx.busy) cpu.clear = 1;
+    } 
+        
+    if (cpu.perf==3) {      // Call A/D converter
+          a2d.start = 1; 
+          if (a2d.done) cpu.clear = 1;
+    } 
+        
+     cpu.ser_in = 0;
+     cpu.in0 = a2d.dac;
+     cpu.in1 = cpu.out1;
+     cpu.in2 = cpu.out2; 
+     led = cpu.out0;
+     dl4 = a2d.dac[4];          
+     dl3 = a2d.dac[3];
+     dl2 = a2d.dac[2];
+     dl1 = a2d.dac[1];
+     dl0 = a2d.dac[0];  
+     a2d.cmp = cmp;  
+     }
+}

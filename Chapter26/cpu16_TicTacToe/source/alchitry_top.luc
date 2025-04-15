@@ -1,0 +1,58 @@
+module alchitry_top (
+ input clk,              // 100MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input usb_rx,           // USB->Serial input
+    output usb_tx,           // USB->Serial output
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_segment [8],      // 7-segment LEDs on IO Shield
+    output io_select [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8]     // DIP switches on IO Shield
+  ) {
+  
+  sig rst;                  // reset signal
+  
+  .clk(clk) {
+    reset_conditioner reset_cond;
+    .rst(rst) {
+      cpu cpu;
+      uart_rx uart_rx(#BAUD(1000000), #CLK_FREQ(100000000));
+      uart_tx uart_tx(#BAUD(1000000), #CLK_FREQ(100000000));
+    }
+  }
+  
+  always {
+    led = io_button;  // just to get rid of warning
+    cpu.clear = 0; 
+    uart_tx.new_data = 0;
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    led = 8h00;             // turn LEDs off
+    io_segment = 8hff;          // turn segments off
+    io_select = 4hf;           // select no digits
+    io_led = 3x{{8h00}};    // turn LEDs off
+    uart_tx.data = cpu.ser_out;// echo the serial data
+    cpu.ser_in = uart_rx.data;
+    uart_tx.block = 0;
+    usb_tx = uart_tx.tx;    // connect the output
+    uart_rx.rx = usb_rx;    // connect the input
+    if (cpu.perf==1) {      // Call Serial In
+       if (uart_rx.new_data){
+          cpu.ser_in = uart_rx.data;
+          cpu.clear = 1;
+      } 
+    }
+    if (cpu.perf==2) {      // Call Serial Out
+          uart_tx.data = cpu.ser_out; 
+          uart_tx.new_data = 1;
+          if (!uart_tx.busy) cpu.clear = 1;
+    } 
+ cpu.in0 = io_dip[0];   // connect input ports to dip switches
+    cpu.in1 = io_dip[1];
+    cpu.in2 = io_dip[2];
+    io_led[0] = cpu.out0;  // connect output ports to leds
+    io_led[1] = cpu.out1;
+    io_led[2] = cpu.out2;
+  }
+}

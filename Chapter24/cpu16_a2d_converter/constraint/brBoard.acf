@@ -1,0 +1,10 @@
+STANDARD(LVCMOS33) { // standard 3.3V IO standard
+     // GND
+     // +3.3 v 
+pin dl4 A43; 
+pin dl3 A40; 
+pin dl2 A37; 
+pin dl1 A34; 
+pin dl0 A31;  
+pin cmp A28 PULL(UP); 
+}

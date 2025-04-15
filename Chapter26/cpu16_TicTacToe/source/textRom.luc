@@ -1,0 +1,32 @@
+module textRom (
+  input address[6],
+  input sel[6],
+  output one_char[8]
+  ) {
+  sig text[64][8];
+  always {
+   
+    text = "                                                                "; //default
+  
+    case (address) {
+ 
+      0: text = $reverse("     *   *   *   *   *   *   *   *   *   *   *  \n               ");
+      1: text = $reverse("                 *               *              \n               ");
+      2: text = $reverse("                 *               *              \n               ");
+      3: text = $reverse("                   Tic Tac Toe                  \n               ");
+      4: text = $reverse("Your move (1-9): \n                                              ");
+      5: text = $reverse("You win!!! Congrats!   \n                                        ");
+      6: text = $reverse("You lose. Sorry!  \n                                             ");
+      7: text = $reverse("It's a tie!  \n                                                  ");
+      8: text = $reverse("Another game? (Y or N):  \n                                      ");
+            // pseudo random corners
+      9: text = $reverse("9137937137197193917317397391139739719713713973193197973179319317" );
+      // pseudo random center squares
+     10: text = $reverse("2648648248268264628428468462246846826824824684264268684286426428" );
+     11: text = $reverse("thinking . . . \n                                                ");
+");
+    }
+    one_char =  text[sel];
+  }
+}
+

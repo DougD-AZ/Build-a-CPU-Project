@@ -1,0 +1,79 @@
+{
+    "project": {
+        "type": "V1.3",
+        "projectName": "cpu16_TicTacToe",
+        "board": "Alchitry Au",
+        "sourceFiles": [
+            {
+                "file": {
+                    "type": "DiskFile",
+                    "path": "source/alchitry_top.luc"
+                },
+                "top": true
+            },
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Conditioning/reset_conditioner.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "DiskFile",
+                    "path": "source/cpu.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "DiskFile",
+                    "path": "source/global_constants.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "DiskFile",
+                    "path": "source/instRom.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "DiskFile",
+                    "path": "source/textRom.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Interfaces/uart_tx.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Interfaces/uart_rx.luc"
+                }
+            },
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Memory/simple_ram.v"
+                }
+            }
+        ],
+        "constraintFiles": [
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Constraints/alchitry.acf"
+                }
+            },
+            {
+                "file": {
+                    "type": "Component",
+                    "path": "Constraints/io_v1.acf"
+                }
+            }
+        ],
+        "ipCores": []
+    }
+}

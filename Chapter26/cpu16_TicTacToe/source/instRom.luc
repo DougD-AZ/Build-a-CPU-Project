@@ -1,0 +1,694 @@
+module instRom (
+  input address[16],
+  output inst[24]
+  ) {
+  // Constants Used in Tic Tac Toe program
+  
+   // prog counter names
+   const START      = 16d0;
+   const PLAYER     = 16d60;
+   const DISPLAY    = 16d500;
+   const INPUT      = 16d800;
+   const OUTPUT     = 16d900;
+   const DBLSP      = 16d930;
+   const LINEOUT    = 16d1000;
+   const DISPOUT    = 16d1200;
+   const CONV2ADDR  = 16d1400;
+   const PUT_XO     = 16d1630;
+   const ANALYZE    = 16d1700;
+   const SET_GRID   = 16d2000;
+   const ADD_LABLES = 16d2400;
+   const CPU_MOVE   = 16d3000;
+   const ENDGAME    = 16d3290;
+   const PUT_O      = 16d3300;
+   const EMPTYBOX   = 16d4000;
+   const FINDSUM    = 16d4100;
+   const RANDOMIZE  = 16d4300;
+   const DELAY1     = 16d9000;
+   const DELAY2     = 16d9100;
+   const INTERRUPT  = 16d10000;
+   const RETURN     = 16d10500;
+  
+  // characters
+   const MARK_X =  16h58; // "X"
+   const MARK_O =  16h4F; // "O"
+  
+  // board positions
+   const B1 = 16h008A;
+   const B2 = 16h0099;
+   const B3 = 16h00A9;
+   const B4 = 16h018A;
+   const B5 = 16h0199;
+   const B6 = 16h01A9;
+   const B7 = 16h028A;
+   const B8 = 16h0299;
+   const B9 = 16h02A9;
+  
+  // sums across board
+   const ROW1 = 16h0300;
+   const ROW2 = 16h0301;
+   const ROW3 = 16h0302;
+   const COL1 = 16h0303;
+   const COL2 = 16h0304;
+   const COL3 = 16h0305;
+   const DIG1 = 16h0306;
+   const DIG2 = 16h0307;
+  
+  // flags and pseudo-random number pointer
+   const END_FLAG = 16h0308;
+   const ERR_FLAG = 16h0309;
+   const RANDOM   = 16h030A; 
+   
+   always {
+    inst = c{Inst.NOP, 19b0};                                 // default instruction is NOP
+    case   (address)   {
+       // Tic Tac Toe
+     START: inst = c{Inst.NOP, Call.SER_IN,         14d0};    // wait for any input
+      0010: inst = c{Inst.JSR, SET_GRID,             3d0};    // set up the grid
+      0030: inst = c{Inst.JSR, ADD_LABLES,           3d0};    // add lables
+      0040: inst = c{Inst.JSR, DISPLAY,              3d0};    // jump to subroutine DISPLAY
+      // Wait for player to move 
+    PLAYER: inst = c{Inst.LDI, Reg.X1, 16d4             };    // ask for input   
+      0090: inst = c{Inst.JSR, OUTPUT,             3d0};    // put on serial display   
+      0100: inst = c{Inst.JSR, INPUT,                3d0};    // put on serial display  
+      0110: inst = c{Inst.LDI, Reg.S2, MARK_X           };    // load an "X"
+      0125: inst = c{Inst.JSR, PUT_XO,               3d0};    // put the X in selected square  
+      0130: inst = c{Inst.SMAI, ERR_FLAG,            3d0};    // set addr of error flag 
+      0132: inst = c{Inst.LDM, Reg.D1,              16d0};    // check error status
+      0134: inst = c{Inst.CMPI, Reg.D1, 16d01           };    // if not error
+      0136: inst = c{Inst.BNE, 16d0140,              3d0};   // cont.
+      0137: inst = c{Inst.JSR, DBLSP,                3d0};   // and go back for new input
+      0138: inst = c{Inst.JMP, PLAYER,              3d0};   // else, double space   
+      0150: inst = c{Inst.JSR, DBLSP,                3d0};    // double space 
+      0165: inst = c{Inst.JSR, DELAY1,               3d0};     // wait 0.5 sec
+      0172: inst = c{Inst.JSR, DISPLAY,              3d0};    // double space 
+      0175: inst = c{Inst.JSR, DBLSP,                3d0};    // put board on serial display   
+      0176: inst = c{Inst.LDI, Reg.X1, 16d11            };    // "thinking..."
+      0178: inst = c{Inst.JSR, OUTPUT,               3d0};    // 
+      0185: inst = c{Inst.JSR, DELAY2,               3d0};   // wait 3 seconds  
+      // CPU moves here
+      0195: inst = c{Inst.JSR, CPU_MOVE,             3d0};    // CPU moves
+      // end game or return to give player another move
+      0200: inst = c{Inst.SMAI, END_FLAG,            3d0};    // check if game ended 
+      0210: inst = c{Inst.LDM, Reg.S1,              16d0};    // 
+      0220: inst = c{Inst.CMP, Reg.S1,              16d0};    // 
+      0230: inst = c{Inst.BZR, PLAYER,               3d0};    // if not, back for player move   
+      0240: inst = c{Inst.LDI, Reg.S1, 16d0             };    // else clear end game flag
+      0250: inst = c{Inst.STM, Reg.S1,              16d0};    // 
+      0270: inst = c{Inst.JSR, DBLSP,                3d0};    // double space
+      0280: inst = c{Inst.JMP, START,                3d0};    // start over      
+      
+      // display Ram content
+  DISPLAY: inst = c{Inst.LDI, Reg.X4, 16h0000           };     // load X4 with RAM address
+      515: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 1 
+      525: inst = c{Inst.LDI, Reg.X4, 16h0040           };     // load X4 with RAM address
+      535: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 2
+      545: inst = c{Inst.LDI, Reg.X4, 16h0080           };     // load X4 with RAM address
+      555: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3
+      565: inst = c{Inst.LDI, Reg.X4, 16h00C0           };     // load X4 with RAM address
+      575: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 2 
+      585: inst = c{Inst.LDI, Reg.X4, 16h0100           };     // load X4 with RAM address
+      595: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3
+      605: inst = c{Inst.LDI, Reg.X4, 16h0140           };     // load X4 with RAM address
+      615: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 2
+      625: inst = c{Inst.LDI, Reg.X4, 16h0180           };     // load X4 with RAM address
+      635: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3
+      645: inst = c{Inst.LDI, Reg.X4, 16h01C0           };     // load X4 with RAM address
+      655: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3
+      665: inst = c{Inst.LDI, Reg.X4, 16h0200           };     // load X4 with RAM address
+      675: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 2   
+      685: inst = c{Inst.LDI, Reg.X4, 16h0240           };     // load X4 with RAM address
+      695: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3 
+      725: inst = c{Inst.LDI, Reg.X4, 16h0280           };     // load X4 with RAM address
+      735: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3    
+      745: inst = c{Inst.LDI, Reg.X4, 16h02C0           };     // load X4 with RAM address
+      755: inst = c{Inst.JSR, DISPOUT,               3d0};     // line 3   
+      760: inst = c{Inst.RTN,                       19d0};     // return  
+      
+     // input from player single char, echo it, will be in S1   
+    INPUT: inst = c{Inst.NOP, Call.SER_IN,          14d0};    // compare X
+      805: inst = c{Inst.IN, Reg.S1, Port.SER_IN,   13d0};     // put input in reg S2       
+      810: inst = c{Inst.OUT, Reg.S1, Port.SER_OUT, 13d0};     // put reg S2 in out port   
+      815: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial output echos input
+      820: inst = c{Inst.LDI, Reg.S2, 16h30             };     // subtract h30 to get actual number
+      825: inst = c{Inst.SUB, Reg.S1, Reg.S1,Reg.S2,10d0};     // and put back in S1
+      830: inst = c{Inst.RTN,                       19d0};     // return
+
+    // Output one line of text from ROM, X1 points to addr, 
+   OUTPUT: inst = c{Inst.SMA, Reg.X1,               16d0};     // load the address
+      902: inst = c{Inst.LDI, Reg.X2, 16d0              };     // set cursor at 0
+      904: inst = c{Inst.LDR, Reg.S1, Reg.X2,       13d0};     // load char from ROM
+      906: inst = c{Inst.CMPI, Reg.S1, 16h0A            };     // compare last char with LF
+      908: inst = c{Inst.BEQ, 16d918,                3d0};     // if not, go back for anothre char
+      910: inst = c{Inst.OUT, Reg.S1, Port.SER_OUT, 13d0};     // put it in output
+      912: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial out
+      914: inst = c{Inst.INC, Reg.X2,               16d0};     // increment cursor
+      916: inst = c{Inst.JMP, 16d904,                3d0};     // increment cursor
+      918: inst = c{Inst.RTN,                       19d0};     // else return
+      
+    // Space down two lines in serial output 
+    DBLSP: inst = c{Inst.LDI, Reg.S1, 16h0A             };     // load a LF
+      932: inst = c{Inst.OUT, Reg.S1, Port.SER_OUT, 13d0};     // put it in output
+      934: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial out
+      936: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial out
+      938: inst = c{Inst.RTN,                       19d0};     // else return 
+          
+  // outputs ROM to RAM; needs preset ROM Addr, X4 select, and X3 RAM addr    
+  LINEOUT: inst = c{Inst.LDR, Reg.S2, Reg.X4,       13d0};     // read from ROM 
+     1010: inst = c{Inst.SMA, Reg.X3,               16d0};     // set RAM address   
+     1020: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+     1025: inst = c{Inst.SMA, Reg.X1,               16d0};     // restore ROM line addr
+     1030: inst = c{Inst.INC, Reg.X4,               16d0};     // increment ROM select
+     1035: inst = c{Inst.INC, Reg.X3,               16d0};     // increment RAM address  
+     1040: inst = c{Inst.LDI, Reg.S1, 16h0A             };     // load LF char 
+     1050: inst = c{Inst.CMP, Reg.S2, Reg.S1,       13d0};     // compare X5 
+     1060: inst = c{Inst.BNE, LINEOUT,               3d0};     // go back for next char
+     1070: inst = c{Inst.RTN,                       19d0};     // return     
+        
+  // outputs from RAM; needs X4 address    
+  DISPOUT: inst = c{Inst.SMA, Reg.X4,               16d0};     // read from RAM  
+     1205: inst = c{Inst.LDM, Reg.S2,               16d0};    
+     1210: inst = c{Inst.OUT, Reg.S2, Port.SER_OUT, 13d0};     // put it in serial out port   
+     1220: inst = c{Inst.NOP, Call.SER_OUT,         14d0};     // serial output 
+     1230: inst = c{Inst.INC, Reg.X4,               16d0};     // increment ROM addrss  
+     1240: inst = c{Inst.LDI, Reg.S1, 16h0A             };     // load LF char 
+     1250: inst = c{Inst.CMP, Reg.S2, Reg.S1,       13d0};     // compare X5 
+     1260: inst = c{Inst.BNE, DISPOUT,               3d0};     // go back for next char
+     1270: inst = c{Inst.RTN,                       19d0};     // return
+      
+     // converts box number in S1 to its address in S1   
+CONV2ADDR: inst = c{Inst.CMPI, Reg.S1, 16d1             };     // is box = 1
+     1410: inst = c{Inst.BNE, 16d1430,               3d0};     // if not, try again  
+     1415: inst = c{Inst.LDI, Reg.S1, B1                };     // load addr of box 1
+     1420: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM 
+     1430: inst = c{Inst.CMPI, Reg.S1, 16d2             };     // is box = 2
+     1435: inst = c{Inst.BNE, 16d1455,               3d0};     // if not, try again  
+     1440: inst = c{Inst.LDI, Reg.S1, B2                };     // load addr of box 2
+     1445: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM 
+     1455: inst = c{Inst.CMPI, Reg.S1, 16d3             };     // is box = 3
+     1460: inst = c{Inst.BNE, 16d1480,               3d0};     // if not, try again  
+     1465: inst = c{Inst.LDI, Reg.S1, B3                };     // load addr of box 3
+     1470: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM 
+     1480: inst = c{Inst.CMPI, Reg.S1, 16d4             };     // is box = 4
+     1485: inst = c{Inst.BNE, 16d1505,               3d0};     // if not, try again  
+     1490: inst = c{Inst.LDI, Reg.S1, B4                };     // load addr of box 4
+     1495: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM 
+     1505: inst = c{Inst.CMPI, Reg.S1, 16d5             };     // is box = 5
+     1510: inst = c{Inst.BNE, 16d1530,               3d0};     // if not, try again  
+     1515: inst = c{Inst.LDI, Reg.S1, B5                };     // load addr of box 5
+     1520: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM 
+     1530: inst = c{Inst.CMPI, Reg.S1, 16d6             };     // is box = 6
+     1535: inst = c{Inst.BNE, 16d1555,               3d0};     // if not, try again  
+     1540: inst = c{Inst.LDI, Reg.S1, B6                };     // load addr of box 6
+     1545: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM
+     1555: inst = c{Inst.CMPI, Reg.S1, 16d7             };     // is box = 7
+     1560: inst = c{Inst.BNE, 16d1580,               3d0};     // if not, try again  
+     1565: inst = c{Inst.LDI, Reg.S1, B7                };     // load addr of box 7
+     1570: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM   
+     1580: inst = c{Inst.CMPI, Reg.S1, 16d8             };     // is box = 8
+     1585: inst = c{Inst.BNE, 16d1600,               3d0};     // if not, try again  
+     1590: inst = c{Inst.LDI, Reg.S1, B8                };     // load addr of box 8
+     1595: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM    
+     1600: inst = c{Inst.CMPI, Reg.S1, 16d9             };     // is box = 9
+     1605: inst = c{Inst.BNE, 16d1620,               3d0};     // if not, got to error
+     1610: inst = c{Inst.LDI, Reg.S1, B9                };     // load addr of box 9 
+     1515: inst = c{Inst.JMP, 16d1625,               3d0};     // jump to place in RAM    
+     1620: inst = c{Inst.LDI, Reg.D1, 16d0001           };     // set error flag 
+     1622: inst = c{Inst.SMAI, ERR_FLAG,             3d0};     // store effor flag
+     1624: inst = c{Inst.STM, Reg.D1,               16d0};     //    
+     1625: inst = c{Inst.RTN,                       19d0};     // load addr of box 9 
+          
+     // puts on X or O in grid; needs S1 box # and S2 X h58 or O h4F    
+     // is selected box empty?                                                           // convert box number in S1
+   PUT_XO: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // to its addr in addr in S1
+     1635: inst = c{Inst.SMA, Reg.S1,               16d0};     // load addr of selected box   
+     1640: inst = c{Inst.LDM, Reg.D1,               16d0};     // load current content of box  
+     1645: inst = c{Inst.CMPI, Reg.D1, 16h20            };     // is it a space? 
+     1650: inst = c{Inst.BEQ, 16d1660,              3d0 };     // proceed to fill space
+     // otherwise (number not 1-9 or space not emptry)     
+     1652: inst = c{Inst.LDI, Reg.D1, 16d0001           };    // set error flag
+     1655: inst = c{Inst.JMP, 16d1666,               3d0};    // 
+     // valid input
+     1660: inst = c{Inst.STM, Reg.S2,               16h0};     // store X or O 
+     1664: inst = c{Inst.LDI, Reg.D1, 16d0000           };    // clear error flag
+      // either way, store error status and return
+     1666: inst = c{Inst.SMAI, ERR_FLAG,             3d0};     // store effor flag
+     1668: inst = c{Inst.STM, Reg.D1,               16d0};     //    
+     1670: inst = c{Inst.RTN,                       19d0};     // return
+   
+        // Analyze the board   
+  ANALYZE: inst = c{Inst.SMAI, B1,                   3d0};     // Add the content
+     1702: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1704: inst = c{Inst.SMAI, B2,                   3d0};     // and store
+     1706: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1708: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1710: inst = c{Inst.SMAI, B3,                   3d0};     // 
+     1712: inst = c{Inst.LDM, Reg.S2,               16d0};     // For ROW1
+     1714: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1716: inst = c{Inst.SMAI, ROW1,                 3d0};     // 
+     1718: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1720: inst = c{Inst.SMAI, B4,                   3d0};     // Add the content
+     1722: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1724: inst = c{Inst.SMAI, B5,                   3d0};     // and store
+     1726: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1728: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1730: inst = c{Inst.SMAI, B6,                   3d0};     // 
+     1732: inst = c{Inst.LDM, Reg.S2,               16d0};     // For ROW2
+     1734: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1736: inst = c{Inst.SMAI, ROW2,                 3d0};     // 
+     1738: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1740: inst = c{Inst.SMAI, B7,                   3d0};     // Add the content
+     1742: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1744: inst = c{Inst.SMAI, B8,                   3d0};     // and store
+     1746: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1748: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1750: inst = c{Inst.SMAI, B9,                   3d0};     // 
+     1752: inst = c{Inst.LDM, Reg.S2,               16d0};     // For ROW3
+     1754: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1756: inst = c{Inst.SMAI, ROW3,                 3d0};     // 
+     1758: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1760: inst = c{Inst.SMAI, B1,                   3d0};     // Add the content
+     1762: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1764: inst = c{Inst.SMAI, B4,                   3d0};     // and store
+     1766: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1768: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1770: inst = c{Inst.SMAI, B7,                   3d0};     // 
+     1772: inst = c{Inst.LDM, Reg.S2,               16d0};     // For COL1
+     1774: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1776: inst = c{Inst.SMAI, COL1,                 3d0};     // 
+     1778: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1780: inst = c{Inst.SMAI, B2,                   3d0};     // Add the content
+     1782: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1784: inst = c{Inst.SMAI, B5,                   3d0};     // and store
+     1786: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1788: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1790: inst = c{Inst.SMAI, B8,                   3d0};     // 
+     1792: inst = c{Inst.LDM, Reg.S2,               16d0};     // For COL2
+     1794: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1796: inst = c{Inst.SMAI, COL2,                 3d0};     // 
+     1798: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1800: inst = c{Inst.SMAI, B3,                   3d0};     // Add the content
+     1802: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1804: inst = c{Inst.SMAI, B6,                   3d0};     // and store
+     1806: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1808: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1810: inst = c{Inst.SMAI, B9,                   3d0};     // 
+     1812: inst = c{Inst.LDM, Reg.S2,               16d0};     // For COL3
+     1814: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1816: inst = c{Inst.SMAI, COL3,                 3d0};     // 
+     1818: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1820: inst = c{Inst.SMAI, B1,                   3d0};     // Add the content
+     1822: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1824: inst = c{Inst.SMAI, B5,                   3d0};     // and store
+     1826: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1828: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1830: inst = c{Inst.SMAI, B9,                   3d0};     // 
+     1832: inst = c{Inst.LDM, Reg.S2,               16d0};     // For DIG1
+     1834: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1836: inst = c{Inst.SMAI, DIG1,                 3d0};     // 
+     1838: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1840: inst = c{Inst.SMAI, B7,                   3d0};     // Add the content
+     1842: inst = c{Inst.LDM, Reg.S1,               16d0};     // of 3 boxes
+     1844: inst = c{Inst.SMAI, B5,                   3d0};     // and store
+     1846: inst = c{Inst.LDM, Reg.S2,               16d0};     // the result
+     1848: inst = c{Inst.ADD, Reg.D1, Reg.S1,Reg.S2,10d0};     // in memory   
+     1850: inst = c{Inst.SMAI, B3,                   3d0};     // 
+     1852: inst = c{Inst.LDM, Reg.S2,               16d0};     // For DIA2
+     1854: inst = c{Inst.ADD, Reg.D1, Reg.D1,Reg.S2,10d0};     //
+     1856: inst = c{Inst.SMAI, DIG2,                 3d0};     // 
+     1858: inst = c{Inst.STM, Reg.D1,               16d0};     // 
+      
+     1862: inst = c{Inst.RTN,                       19d0};     // 
+      
+  SET_GRID: inst = c{Inst.SMAI, 16d3,                 3d0};     // set ROM address
+      2010: inst = c{Inst.LDI, Reg.X1, 16d3              };     // and put it in X1
+      2015: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2020: inst = c{Inst.LDI, Reg.X3, 16h0000           };     // load RAM address
+      2030: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 1 = title
+      
+      2035: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2040: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2045: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2050: inst = c{Inst.LDI, Reg.X3, 16h0040           };     // load RAM address
+      2060: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 2
+      
+      2065: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2070: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2075: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2080: inst = c{Inst.LDI, Reg.X3, 16h0080           };     // load RAM address
+      2090: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 3
+      
+      2095: inst = c{Inst.SMAI, 16d2,                 3d0};     // set ROM address
+      2100: inst = c{Inst.LDI, Reg.X1, 16d2              };     // and put it in X1
+      2105: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2110: inst = c{Inst.LDI, Reg.X3, 16h00C0           };     // load RAM address
+      2120: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 4
+      
+      2125: inst = c{Inst.SMAI, 16d0,                 3d0};     // set ROM address
+      2130: inst = c{Inst.LDI, Reg.X1, 16d0              };     // and put it in X1
+      2135: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2140: inst = c{Inst.LDI, Reg.X3, 16h0100           };     // load RAM address
+      2150: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 5
+      
+      2155: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2160: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2165: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2170: inst = c{Inst.LDI, Reg.X3, 16h0140           };     // load RAM address
+      2180: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 6
+      
+      2185: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2190: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2195: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2200: inst = c{Inst.LDI, Reg.X3, 16h0180           };     // load RAM address
+      2210: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 7
+      
+      2215: inst = c{Inst.SMAI, 16d2,                 3d0};     // set ROM address
+      2220: inst = c{Inst.LDI, Reg.X1, 16d2              };     // and put it in X1
+      2225: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2230: inst = c{Inst.LDI, Reg.X3, 16h01C0           };     // load RAM address
+      2240: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 8
+      
+      2245: inst = c{Inst.SMAI, 16d0,                 3d0};     // set ROM address
+      2250: inst = c{Inst.LDI, Reg.X1, 16d0              };     // and put it in X1
+      2255: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2260: inst = c{Inst.LDI, Reg.X3, 16h0200           };     // load RAM address
+      2270: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 9
+      
+      2275: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2280: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2285: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2290: inst = c{Inst.LDI, Reg.X3, 16h0240           };     // load RAM address
+      2300: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 10
+      
+      2305: inst = c{Inst.SMAI, 16d1,                 3d0};     // set ROM address
+      2310: inst = c{Inst.LDI, Reg.X1, 16d1              };     // and put it in X1
+      2315: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2320: inst = c{Inst.LDI, Reg.X3, 16h0280           };     // load RAM address
+      2330: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 11
+      
+      2335: inst = c{Inst.SMAI, 16d2,                 3d0};     // set ROM address
+      2340: inst = c{Inst.LDI, Reg.X1, 16d2              };     // and put it in X1
+      2345: inst = c{Inst.LDI, Reg.X4, 16d0              };     // set char Select to 0
+      2350: inst = c{Inst.LDI, Reg.X3, 16h02C0           };     // load RAM address
+      2360: inst = c{Inst.JSR, LINEOUT,               3d0};     // line 12
+      2370: inst = c{Inst.RTN,                       19d0};    // return
+        
+        // add lables to boxes in RAM
+ADD_LABLES: inst = c{Inst.LDI, Reg.S2,16h31              };     // load char "1" 
+      2432: inst = c{Inst.SMAI, 16h00C4,              3d0};     // set RAM address   
+      2434: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM   
+      2435: inst = c{Inst.LDI, Reg.S2,16h32              };     // load char "2"     
+      2437: inst = c{Inst.SMAI, 16h00D3,              3d0};     // set RAM address   
+      2439: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+      2440: inst = c{Inst.LDI, Reg.S2,16h33              };     // load char "3"     
+      2442: inst = c{Inst.SMAI, 16h00E3,              3d0};     // set RAM address   
+      2444: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+      2450: inst = c{Inst.LDI, Reg.S2, 16h34             };     // load char "4"    
+      2452: inst = c{Inst.SMAI, 16h01C4,              3d0};     // set RAM address   
+      2454: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM   
+      2455: inst = c{Inst.LDI, Reg.S2,16h35              };     // load char "5"  
+      2457: inst = c{Inst.SMAI, 16h01D3,              3d0};     // set RAM address   
+      2459: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+      2460: inst = c{Inst.LDI, Reg.S2,16h36              };     // load char "6"    
+      2462: inst = c{Inst.SMAI, 16h01E3,              3d0};     // set RAM address   
+      2464: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+      2470: inst = c{Inst.LDI, Reg.S2,16h37              };     // load char "7"    
+      2472: inst = c{Inst.SMAI, 16h02C4,              3d0};     // set RAM address   
+      2474: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM   
+      2475: inst = c{Inst.LDI, Reg.S2,16h38              };     // load char "8" 
+      2477: inst = c{Inst.SMAI, 16h02D3,              3d0};     // set RAM address   
+      2479: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM 
+      2480: inst = c{Inst.LDI, Reg.S2,16h39              };     // load char "9"     
+      2482: inst = c{Inst.SMAI, 16h02E3,              3d0};     // set RAM address   
+      2484: inst = c{Inst.STM, Reg.S2,               16d0};     // store in RAM
+      2490: inst = c{Inst.RTN,                       19d0};     // return
+      
+        // CPU move
+CPU_MOVE: inst = c{Inst.JSR, ANALYZE,               3d0};     // 
+     // Check if player just won
+     3010: inst = c{Inst.LDI, Reg.S2, 16d264            };     //  load sum for player win = 264          
+     3020: inst = c{Inst.JSR, FINDSUM,               3d0};     //  find a sum with it  
+     3025: inst = c{Inst.CMP, Reg.X1,               16d0};     //      
+     3030: inst = c{Inst.BZR, 16d3045,               3d0};     //  if none, go to next step
+     3035: inst = c{Inst.LDI, Reg.X1, 16d5             };      //  player just won, load "you win"                                                       // else game over, play won!
+     3040: inst = c{Inst.JMP, ENDGAME,               3d0};     //  game over     
+     // check to see if CPU can will on next move   
+     3045: inst = c{Inst.LDI, Reg.S2, 16d190            };     //  load sum for possible CPU win = 190         
+     3055: inst = c{Inst.JSR, FINDSUM,               3d0};     //  find a sum with it      
+     3060: inst = c{Inst.CMP, Reg.X1,               16d0};     //      
+     3065: inst = c{Inst.BZR, 16d3105,               3d0};     //  if none, go to next step 
+     // yes, CPU can win  
+     3075: inst = c{Inst.JSR, EMPTYBOX,              3d0};     //  find the empty box for the win        
+     3080: inst = c{Inst.SMA, Reg.S2,               16d0};     // set empty box in memory addr 
+     3090: inst = c{Inst.JSR, PUT_O,                 3d0};     //  put an O in empty box
+     3095: inst = c{Inst.LDI, Reg.X1, 16d6              };      // CPU just won, load "you lose"                                                       // else game over, play won!
+     3100: inst = c{Inst.JMP, ENDGAME,               3d0};     //  game over  
+     // does CPU need to block player's potential win? 
+     3105: inst = c{Inst.LDI, Reg.S2, 16d208            };     //  load sum for possible player win = 208         
+     3115: inst = c{Inst.JSR, FINDSUM,               3d0};     //  find a sum with it         
+     3120: inst = c{Inst.CMP, Reg.X1,                16d0};     //      
+     3125: inst = c{Inst.BZR, 16d3200,                3d0};     //  if none, go to next step  
+      // yes, CPU needs to block
+     3135: inst = c{Inst.JSR, EMPTYBOX,              3d0};     //  find the empty box to block         
+     3140: inst = c{Inst.SMA, Reg.S2,               16d0};     // set empty box in memory addr 
+     3145: inst = c{Inst.JMP, PUT_O,                 3d0};     //  put an O in empty box
+     // Check other move, starting with center, then corner, than any  
+     3200: inst = c{Inst.SMAI, B5,                   3d0};     // is center open?
+     3202: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3204: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3206: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there
+      
+   // pick a corner
+     3208: inst = c{Inst.LDI, Reg.X1, 16d09             };     // set for corner options
+     3210: inst = c{Inst.JSR, RANDOMIZE,             3d0};     // get them randomized
+     
+     3211: inst = c{Inst.MOV, Reg.S1, Reg.X1,       13d0};     // move 1st number to S1
+     3213: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3214: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 2nd number open?      
+     3216: inst = c{Inst.LDM, Reg.S1,               16d0};     // check   
+     3217: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3218: inst = c{Inst.BEQ, PUT_O,                 3d0}; 
+     
+     3221: inst = c{Inst.MOV, Reg.S1, Reg.X2,       13d0};     // move 2nd number to S1
+     3223: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3224: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 2nd number open?
+     3226: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3227: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3228: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there
+      
+     3231: inst = c{Inst.MOV, Reg.S1, Reg.X3,       13d0};     // move 3rd number to S1
+     3233: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3234: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 3rd number open?
+     3236: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3237: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3238: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there
+      
+     3241: inst = c{Inst.MOV, Reg.S1, Reg.X4,       13d0};     // move 4th number to S1 
+     3243: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3244: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 4th number open?
+     3246: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3247: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3248: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there   
+        
+    // pick a middle square    
+     3250: inst = c{Inst.LDI, Reg.X1, 16d10             };     // set for middle square options
+     3252: inst = c{Inst.JSR, RANDOMIZE,             3d0};     // get them randomized
+     
+     3253: inst = c{Inst.MOV, Reg.S1, Reg.X1,       13d0};     // move 1st number to S1 
+     3255: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3256: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 2nd number open?      
+     3258: inst = c{Inst.LDM, Reg.S1,               16d0};     // check   
+     3259: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3260: inst = c{Inst.BEQ, PUT_O,                 3d0}; 
+     
+     3261: inst = c{Inst.MOV, Reg.S1, Reg.X2,       13d0};     // move 2nd number to S1  
+     3263: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3264: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 2nd number open?
+     3266: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3267: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3268: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there
+      
+     3271: inst = c{Inst.MOV, Reg.S1, Reg.X3,       13d0};     // move 3rd number to S1 
+     3273: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3274: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 3rd number open?
+     3276: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3277: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3278: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there
+      
+     3281: inst = c{Inst.MOV, Reg.S1, Reg.X4,       13d0};     // move 4th number to S1
+     3283: inst = c{Inst.JSR, CONV2ADDR,             3d0};     // convert it to an address  
+     3284: inst = c{Inst.SMA, Reg.S1,               16d0};     // is 4th number open?
+     3286: inst = c{Inst.LDM, Reg.S1,               16d0};     // check
+     3287: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // Is it a space
+     3288: inst = c{Inst.BEQ, PUT_O,                 3d0};     // if so, move there  
+
+    // no move left       
+     3289: inst = c{Inst.LDI, Reg.X1, 16d7             };    // It's a tie
+  ENDGAME: inst = c{Inst.JSR, OUTPUT,               3d0};    // sent au_top serial display
+     3292: inst = c{Inst.SMAI, END_FLAG,            3d0};    // set game ended flag 
+     3293: inst = c{Inst.LDI, Reg.S1, 16d1             };    // 
+     3295: inst = c{Inst.STM, Reg.S1,              16d0};    // 
+     3296: inst = c{Inst.RTN,                      19d0};    // return
+      
+    // used when we already have set the address of the box where "O" is going      
+    PUT_O: inst = c{Inst.LDI, Reg.S1, MARK_O            };    // put an "O"
+     3305: inst = c{Inst.STM, Reg.S1,               16d0};    // in selected box
+     3315: inst = c{Inst.JSR, DBLSP,                 3d0};    // double space 
+     3335: inst = c{Inst.JSR, DISPLAY,               3d0};    // put board on serial display 
+     3340: inst = c{Inst.RTN,                       19d0};    // return  
+        
+    // find the emptry box: x1,x2 ,x3 are the candidates, answer returned in s2 as the box
+    // for use when you have two "X" s or 2 "O" s
+ EMPTYBOX: inst = c{Inst.LDI, Reg.S2, 16d0              };     // start S1 at 0
+     4002: inst = c{Inst.SMA, Reg.X1,               16d0};     // look at first candidate
+     4004: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4006: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // is it a space
+     4008: inst = c{Inst.BNE, 16d4012,               3d0};     // if not, try again
+     4010: inst = c{Inst.MOV, Reg.S2, Reg.X1,       13d0};     // move answer to S2
+     4012: inst = c{Inst.SMA, Reg.X2,               16d0};     // look at second candidate
+     4014: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4016: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // is it a space
+     4018: inst = c{Inst.BNE, 16d4022,               3d0};     // if not, try again
+     4020: inst = c{Inst.MOV, Reg.S2, Reg.X2,       13d0};     // move answer to S2
+     4022: inst = c{Inst.SMA, Reg.X3,               16d0};     // look at third candidate
+     4024: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4026: inst = c{Inst.CMPI, Reg.S1, 16h20            };     // is it a space
+     4028: inst = c{Inst.BNE, 16d4032,               3d0};     // if not, try again
+     4030: inst = c{Inst.MOV, Reg.S2, Reg.X3,       13d0};     // move answer to S2
+     4032: inst = c{Inst.RTN,                       19d0};     // return
+      
+    // find a line with a desired sum: sum desired in S2, returns X1,X2,X3  as desired boxes or 0's if none.
+    // uses S1, S2, X1, X2, X3
+  FINDSUM: inst = c{Inst.LDI, Reg.X1, 16d0              };     // put a 0 in X1
+     4101: inst = c{Inst.LDI, Reg.X2, 16d0              };     // put a 0 in X2
+     4102: inst = c{Inst.LDI, Reg.X3, 16d0              };     // put a 0 in X3
+     4103: inst = c{Inst.SMAI, ROW1,                 3d0};     // load the sum
+     4105: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4106: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4108: inst = c{Inst.BNE, 16d4122,               3d0};     // no, try next
+     4109: inst = c{Inst.LDI, Reg.X1, B1                };     // else mark it if row
+     4110: inst = c{Inst.LDI, Reg.X2, B2                };     // 
+     4111: inst = c{Inst.LDI, Reg.X3, B3                };     // 
+     4112: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+     
+     4122: inst = c{Inst.SMAI, ROW2,                 3d0};     // load the sum
+     4124: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4126: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4128: inst = c{Inst.BNE, 16d4142,               3d0};     // no, try next
+     4129: inst = c{Inst.LDI, Reg.X1, B4                };     // else mark it if row
+     4130: inst = c{Inst.LDI, Reg.X2, B5                };     // 
+     4131: inst = c{Inst.LDI, Reg.X3, B6                };     // 
+     4132: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4142: inst = c{Inst.SMAI, ROW3,                 3d0};     // load the sum
+     4144: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4146: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4148: inst = c{Inst.BNE, 16d4162,               3d0};     // no, try next
+     4149: inst = c{Inst.LDI, Reg.X1, B7                };     // else mark it if row
+     4150: inst = c{Inst.LDI, Reg.X2, B8                };     // 
+     4151: inst = c{Inst.LDI, Reg.X3, B9                };     // 
+     4152: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4162: inst = c{Inst.SMAI, COL1,                 3d0};     // load the sum
+     4164: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4166: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4168: inst = c{Inst.BNE, 16d4182,               3d0};     // no, try next
+     4169: inst = c{Inst.LDI, Reg.X1, B1                };     // else mark it if column
+     4170: inst = c{Inst.LDI, Reg.X2, B4                };     // 
+     4171: inst = c{Inst.LDI, Reg.X3, B7                };     // 
+     4172: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4182: inst = c{Inst.SMAI, COL2,                 3d0};     // load the sum
+     4184: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4186: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4188: inst = c{Inst.BNE, 16d4202,               3d0};     // no, try next
+     4189: inst = c{Inst.LDI, Reg.X1, B2                };     // else mark it if column
+     4190: inst = c{Inst.LDI, Reg.X2, B5                };     // 
+     4191: inst = c{Inst.LDI, Reg.X3, B8                };     // 
+     4192: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4202: inst = c{Inst.SMAI, COL3,                 3d0};     // load the sum
+     4204: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4206: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4208: inst = c{Inst.BNE, 16d4222,               3d0};     // no, try next
+     4209: inst = c{Inst.LDI, Reg.X1, B3                };     // else mark it if column
+     4210: inst = c{Inst.LDI, Reg.X2, B6                };     // 
+     4211: inst = c{Inst.LDI, Reg.X3, B9                };     // 
+     4212: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4222: inst = c{Inst.SMAI, DIG1,                 3d0};     // load the sum
+     4224: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4226: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4228: inst = c{Inst.BNE, 16d4242,               3d0};     // no, try next
+     4229: inst = c{Inst.LDI, Reg.X1, B1                };     // else mark it if diagonal
+     4230: inst = c{Inst.LDI, Reg.X2, B5                };     // 
+     4231: inst = c{Inst.LDI, Reg.X3, B9                };     // 
+     4232: inst = c{Inst.JMP, 16d4270,               3d0};     // exit
+      
+     4242: inst = c{Inst.SMAI, DIG2,                 3d0};     // load the sum
+     4244: inst = c{Inst.LDM, Reg.S1,               16d0};     // 
+     4246: inst = c{Inst.CMP, Reg.S1, Reg.S2,       13d0};     // compare with desired sum
+     4248: inst = c{Inst.BNE, 16d4270,               3d0};     // no, try next
+     4249: inst = c{Inst.LDI, Reg.X1, B7                };     // else mark it if diagonal
+     4250: inst = c{Inst.LDI, Reg.X2, B5                };     // 
+     4251: inst = c{Inst.LDI, Reg.X3, B3                };     // 
+     4270: inst = c{Inst.RTN,                       19d0};     // Return  
+
+    // input: X1 has a 9 for corners or 10 for middle squares 
+    // 4 possible outputs, as positions 1-9, come back in X1, X2, X3, X4     
+RANDOMIZE: inst = c{Inst.SMAI, RANDOM,               3d0};     // get random pointer 
+     4305: inst = c{Inst.LDM, Reg.D1,               16d0};     // and put in D1
+     4310: inst = c{Inst.SHL, Reg.D1, 16d2              };     // multiply it by 4 - its now select (cursor)
+     4315: inst = c{Inst.LDI, Reg.S1, 16d15             };     // mask to separate number from ASCII
+     4320: inst = c{Inst.SMA, Reg.X1,               16d0};     // set the text ROM addr for the numbers wanted 
+       
+     4325: inst = c{Inst.LDR, Reg.X1, Reg.D1,       13d0};     // get the first number
+     4330: inst = c{Inst.AND, Reg.X1,Reg.X1,Reg.S1, 10d0};     // turn it into the actual number
+      
+     4335: inst = c{Inst.INC, Reg.D1,               16d0};     // increment cursor  
+     4340: inst = c{Inst.LDR, Reg.X2, Reg.D1,       13d0};     // get the 2nd number
+     4345: inst = c{Inst.AND, Reg.X2,Reg.X2,Reg.S1, 10d0};     // turn it into the actual number
+      
+     4350: inst = c{Inst.INC, Reg.D1,               16d0};     // increment cursor 
+     4355: inst = c{Inst.LDR, Reg.X3, Reg.D1,       13d0};     // get the 3rd number
+     4360: inst = c{Inst.AND, Reg.X3,Reg.X3,Reg.S1, 10d0};     // turn it into the actual number
+      
+     4365: inst = c{Inst.INC, Reg.D1,               16d0};     // increment cursor   
+     4370: inst = c{Inst.LDR, Reg.X4, Reg.D1,       13d0};     // get the 4th number
+     4375: inst = c{Inst.AND, Reg.X4,Reg.X4,Reg.S1, 10d0};     // turn it into the actual number  
+      
+     4380: inst = c{Inst.SMAI, RANDOM,               3d0};     // Increment RANDOM 
+     4385: inst = c{Inst.LDM, Reg.D1,               16d0};     // 
+     4390: inst = c{Inst.INC, Reg.D1,               16d0};     // 
+     4395: inst = c{Inst.CMPI, Reg.D1, 16d16            };     // if it gets to 16   
+     4400: inst = c{Inst.BNE, 16d4408,               3d0};     // get the 4th number
+     4405: inst = c{Inst.LDI, Reg.D1,16d0               };     // reset to 0
+     4408: inst = c{Inst.SMAI, RANDOM,               3d0};     // Store new RANDOM 
+     4410: inst = c{Inst.STM, Reg.D1,               16d0};     // store it
+     4415: inst = c{Inst.RTN,                       19d0};     // Return       
+            
+    // 0.5 sec delay for players move
+   DELAY1: inst = c{Inst.LDI, Reg.X5, 16d5000           };
+     9020: inst = c{Inst.CMP, Reg.X5,               16d0};
+     9030: inst = c{Inst.BNZ, 16d9020,               3d0};
+     9040: inst = c{Inst.RTN,                       19d0};
+      
+     // 3 sec delay for CPU move
+   DELAY2: inst = c{Inst.LDI, Reg.X5, 16d30000          };
+     9120: inst = c{Inst.CMP, Reg.X5,               16d0};
+     9130: inst = c{Inst.BNZ, 16d9120,               3d0};
+     9140: inst = c{Inst.RTN,                       19d0};
+        
+    // timed interrupt routine - used for time delays, uses X5 
+INTERRUPT: inst = c{Inst.DEC, Reg.X5,               16d0};    // count down from 100
+   RETURN: inst = c{Inst.RTN,                       19d0};    // return               
+    }
+  }
+}
