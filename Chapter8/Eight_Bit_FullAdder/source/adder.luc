@@ -1,0 +1,16 @@
+module adder (
+    input x,
+	   input y,
+	   input cin,
+	   output sum,
+	   output cout
+) {
+sig   i;  sig j;  sig k;
+always {
+	sum = x ^ y ^ cin;
+	i = x & y;
+	j = x & cin;
+	k = y & cin;
+	cout = i | j | k;
+	}
+}

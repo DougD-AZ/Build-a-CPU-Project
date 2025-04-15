@@ -1,0 +1,20 @@
+module eight_adders (
+	input x[8],
+	input y[8],
+	input cin,
+	output s[8],
+	output cout
+  ) 
+{
+  adder adder[8];
+
+always 
+  {
+  	adder.x = x;
+	  adder.y = y;
+	  adder.cin[0] = cin;
+	  adder.cin[7:1] = adder.cout[6:0];
+	  s = adder.sum;
+	  cout = adder.cout[7];
+  }
+}
