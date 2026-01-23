@@ -34,7 +34,6 @@ module alchitry_top (
     io_led = 3x{{8h00}};    // turn LEDs off
     uart_tx.data = cpu.ser_out;// echo the serial data
     cpu.ser_in = uart_rx.data;
-    uart_tx.block = 0;
     usb_tx = uart_tx.tx;    // connect the output
     uart_rx.rx = usb_rx;    // connect the input
     if (cpu.perf==1) {      // Call Serial In
