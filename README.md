@@ -3,6 +3,8 @@ This repository contains all the code for all projects in the book "Mission Impo
 
 Each project folder is a complete FPGA project with all files necessary to build the project on Alchitry Au FPGA board.  The constraints files need to be updated to run on the Au v2 boards.
 
+IMPORTANT CORRECTION:  In the code listed in the book, references to the uart transmit module contain the code line: uart.tx.block = 0.  The block parameter has been removed from the module since the book was published.  This line now gives a error, and can simply be removed.  
+
 Here are some useful links, referred to in the book:
 
 [Alchitry Boards](https://shop.alchitry.com/collections/products)
